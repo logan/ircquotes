@@ -1,0 +1,20 @@
+<html>
+  <body>
+    <div class="user">
+      {% if user %}
+        Hello, {{ user }} [<a href="{{ logout_url }}">Logout</a>]
+      {% else %}
+        <a href="{{ login_url }}">Login</a>
+      {% endif %}
+    </div>
+    {% for quote in quotes %}
+      <div class="quote">
+        <div class="metadata">
+          Submitted by: {{ quote.author }}<br>
+          Context: {{ quote.context.protocol }}://{{ quote.context.network.servers|first }}/{{ quote.context.location }}
+        </div>
+        <pre>{{ quote.source }}</pre>
+      </div>
+    {% endfor %}
+  </body>
+</html>
