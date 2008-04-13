@@ -1,0 +1,16 @@
+<html>
+  <head>
+    <title>IQ: {% block subtitle %}Accounting for Taste{% endblock %}</title>
+  </head>
+  <body>
+    <div class="user nav">
+      {% if account %}
+        <h1>Hello, {{ account.name }}</h1>
+        <a href="/logout">Logout</a>
+      {% else %}
+        <h1>Sign In</h1>
+        <iframe src="/login?url=/">
+      {% endif %}
+    </div>
+  </body>
+</html>

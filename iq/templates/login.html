@@ -1,0 +1,46 @@
+<html>
+  <head>
+    {% if account and session.url_on_login %}
+    <script>
+window.top.location = "{{ session.url_on_login|urlencode }}";
+    </script>
+    {% endif %}
+    <title>IQ: Login</title>
+    <style>
+.label, .control {
+  font-weight: bold;
+  text-align: right;
+}
+
+.error {
+  font-weight: bold;
+  color: red;
+  text-align: center;
+}
+    </style>
+  </head>
+  <body>
+    <form method="POST">
+      <table>
+        <tr>
+          <td class="label">Name:</td>
+          <td><input type="text" name="name"></td>
+        </tr>
+        <tr>
+          <td class="label">Password:</td>
+          <td><input type="password" name="password"></td>
+        </tr>
+        {% if error %}
+        <tr>
+          <td colspan="2" class="error">{{ error }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td colspan="2" class="control">
+            <input type="submit" value="Login">
+          </td>
+        </tr>
+      </table>
+    </form>
+  </body>
+</html>
