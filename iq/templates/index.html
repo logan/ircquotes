@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<b>{{ start }} - {{ end }}</b>  <a href="/?offset={{ end }}">Next {{ limit }}</a>
 {% for quote in quotes %}
 <pre>
 Quote: {{ quote.legacy_id }}

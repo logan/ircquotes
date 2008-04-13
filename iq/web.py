@@ -8,6 +8,7 @@ from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+import accounts
 import hash
 import quotes
 
@@ -48,13 +49,13 @@ class TemplateHandler(webapp.RequestHandler):
     self['account'] = self.session.account
 
   def loadSession(self):
-    quotes.Session.expireAll()
+    accounts.Session.expireAll()
     if 'session' in self.request.cookies:
       session_id = self.request.cookies['session']
     else:
       session_id = self.generateSessionId()
       self.setCookie('session', session_id)
-    self.session = quotes.Session.load(session_id)
+    self.session = accounts.Session.load(session_id)
 
   def exportSession(self):
     self.session.put()
@@ -82,8 +83,17 @@ class IndexPage(TemplateHandler):
   path = 'index.html'
 
   def handleGet(self):
-    qs = list(quotes.Quote.all())
+    offset = 0
+    try:
+      offset = int(self.request.get('offset'))
+    except ValueError:
+      pass
+    limit = 20
+    qs = quotes.Quote.all().fetch(offset=offset, limit=limit)
     self['quotes'] = qs
+    self['start'] = offset + 1
+    self['end'] = offset + limit
+    self['limit'] = limit
 
 
 class LoginPage(TemplateHandler):
@@ -96,15 +106,15 @@ class LoginPage(TemplateHandler):
     name = self.request.get('name')
     password = self.request.get('password')
     try:
-      account = quotes.Account.login(name, password)
+      account = accounts.Account.login(name, password)
       if account:
         self.setAccount(account)
-    except quotes.Account.NoSuchNameException:
+    except accounts.Account.NoSuchNameException:
       self['error'] = 'invalid account name'
-    except quotes.Account.InvalidPasswordException:
+    except accounts.Account.InvalidPasswordException:
       self['error'] = 'password incorrect'
-    except quotes.Account.NotActivatedException:
-      quotes.Account.setupActivation(name, self.session.url_on_login)
+    except accounts.Account.NotActivatedException:
+      accounts.Account.setupActivation(name, self.session.url_on_login)
       self['error'] = 'account not activated'
       self['activate'] = True
       self['name'] = name
@@ -123,7 +133,7 @@ class ActivationPage(TemplateHandler):
 
   def handleGet(self):
     name = self.request.get('name')
-    account = quotes.Account.getByName(name)
+    account = accounts.Account.getByName(name)
     self['account'] = account
     if account:
       logging.info("Account to activate: %s/%r", account.name, account.activation)
@@ -137,7 +147,7 @@ class ActivationPage(TemplateHandler):
 
   def handlePost(self):
     name = self.request.get('name')
-    account = quotes.Account.getByName(name)
+    account = accounts.Account.getByName(name)
     self['account'] = account
     activation = self.request.get('activation')
     if account and account.activation == activation:
