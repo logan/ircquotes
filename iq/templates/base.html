@@ -3,6 +3,7 @@
     <title>IQ: {% block subtitle %}Accounting for Taste{% endblock %}</title>
   </head>
   <body>
+    {% block user %}
     <div class="user nav">
       {% if account %}
         <h1>Hello, {{ account.name }}</h1>
@@ -11,6 +12,11 @@
         <h1>Sign In</h1>
         <iframe src="/login?url=/">
       {% endif %}
+    </div>
+    {% endblock %}
+    <div class="content">
+      {% block content %}
+      {% endblock %}
     </div>
   </body>
 </html>

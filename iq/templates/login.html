@@ -5,6 +5,11 @@
 window.top.location = "{{ session.url_on_login|urlencode }}";
     </script>
     {% endif %}
+    {% if activate %}
+    <script>
+window.top.location = "/activate?name={{ name|urlencode }}";
+    </script>
+    {% endif %}
     <title>IQ: Login</title>
     <style>
 .label, .control {

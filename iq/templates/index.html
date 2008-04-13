@@ -1,1 +1,17 @@
 {% extends "base.html" %}
+{% block content %}
+{% for quote in quotes %}
+<pre>
+Quote: {{ quote.legacy_id }}
+Context: {{ quote.context.network.name }} ({{ quote.context.protocol }}://{{ quote.context.network.servers|first }}/{{ quote.context.location }})
+Submitted: {{ quote.submitted }} by {{ quote.author.name }}
+Last modified: {{ quote.modified }}
+
+{{ quote.source|escape }}
+{% if quote.note %}
+
+Note: {{ quote.note|escape }}
+{% endif %}
+</pre>
+{% endfor %}
+{% endblock %}

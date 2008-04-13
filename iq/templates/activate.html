@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block subtitle %}Account Activation{% endblock %}
+{% block user %}{% endblock %}
+{% block content %}
+{% if authenticated %}
+  {% if activated %}
+Congratuations, {{ account.name }}, your account has been activated!
+<a href="{{ account.activation_url }}">Continue</a>.
+  {% else %}
+Welcome, {{ account.name }}!  Your email address is now confirmed.  All you need to do is set a password!
+
+<form method="POST" action="/activate">
+  <input type="hidden" name="name" value="{{ account.name }}">
+  <input type="hidden" name="activation" value="{{ account.activation }}">
+  <table class="form">
+    <tr>
+      <td class="label">Password:</td>
+      <td><input type="password" name="password"></td>
+    </tr>
+    <tr>
+      <td class="label">Confirm password:</td>
+      <td><input type="password" name="password2"></td>
+    </tr>
+    {% if error %}
+    <tr>
+      <td colspan="2" class="error">{{ error }}</td>
+    </tr>
+    {% endif %}
+    <tr>
+      <td colspan="2" class="control">
+        <input type="submit" value="Set Password">
+      </td>
+    </tr>
+  </table>
+</form>
+  {% endif %}
+{% else %}
+  {% if account.activation %}
+An activation code has been sent to {{ account.email }}.
+<a href="/activate?name={{ account.name|urlencode }}&send_email=1">Resend email</a>.
+    {% if email_sent %}
+<p>
+<span class="success">Email sent!</span>
+    {% endif %}
+  {% endif %}
+{% endif %}
+{% endblock %}

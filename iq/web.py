@@ -1,6 +1,5 @@
 import datetime
 import logging
-import md5
 import os
 import time
 import wsgiref.handlers
@@ -9,6 +8,7 @@ from google.appengine.api import users
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+import hash
 import quotes
 
 class TemplateHandler(webapp.RequestHandler):
@@ -41,11 +41,11 @@ class TemplateHandler(webapp.RequestHandler):
     self.response.headers.add_header('Set-Cookie', cookie_str)
 
   def generateSessionId(self):
-    # TODO: Make session ID generation more random
-    digester = md5.new()
-    digester.update(str(time.time()))
-    digester.update(self.request.environ['REMOTE_ADDR'])
-    return 's%s' % digester.hexdigest()
+    return 's%s' % hash.generate()
+
+  def setAccount(self, account):
+    self.session.account = account
+    self['account'] = self.session.account
 
   def loadSession(self):
     quotes.Session.expireAll()
@@ -80,8 +80,10 @@ class TemplateHandler(webapp.RequestHandler):
 
 class IndexPage(TemplateHandler):
   path = 'index.html'
+
   def handleGet(self):
-    pass
+    qs = list(quotes.Quote.all())
+    self['quotes'] = qs
 
 
 class LoginPage(TemplateHandler):
@@ -94,11 +96,18 @@ class LoginPage(TemplateHandler):
     name = self.request.get('name')
     password = self.request.get('password')
     try:
-      self.session.account = quotes.Account.login(name, password)
+      account = quotes.Account.login(name, password)
+      if account:
+        self.setAccount(account)
     except quotes.Account.NoSuchNameException:
       self['error'] = 'invalid account name'
     except quotes.Account.InvalidPasswordException:
       self['error'] = 'password incorrect'
+    except quotes.Account.NotActivatedException:
+      quotes.Account.setupActivation(name, self.session.url_on_login)
+      self['error'] = 'account not activated'
+      self['activate'] = True
+      self['name'] = name
 
 
 class LogoutPage(TemplateHandler):
@@ -107,6 +116,51 @@ class LogoutPage(TemplateHandler):
   def handleGet(self):
     self.session.account = None
     self.redirect('/')
+
+
+class ActivationPage(TemplateHandler):
+  path = 'activate.html'
+
+  def handleGet(self):
+    name = self.request.get('name')
+    account = quotes.Account.getByName(name)
+    self['account'] = account
+    if account:
+      logging.info("Account to activate: %s/%r", account.name, account.activation)
+    activation = self.request.get('activation')
+    if account and account.activation == activation:
+      self['authenticated'] = True
+    if self.request.get('send_email'):
+      if account:
+        self['email_sent'] = True
+        account.sendConfirmationEmail()
+
+  def handlePost(self):
+    name = self.request.get('name')
+    account = quotes.Account.getByName(name)
+    self['account'] = account
+    activation = self.request.get('activation')
+    if account and account.activation == activation:
+      self['authenticated'] = True
+      password = self.request.get('password')
+      password_confirmation = self.request.get('password2')
+      logging.info("checking password")
+      if password and password == password_confirmation:
+        logging.info("account activated!")
+        account.activation = None
+        account.password = password
+        account.put()
+        self.setAccount(account)
+        self['activated'] = True
+        return
+      elif password != password_confirmation:
+        logging.info("passwords didn't match")
+        self['error'] = 'Passwords did not match'
+      else:
+        logging.info("no password given")
+        self['error'] = 'Please choose a password'
+    else:
+      logging.info("password form lost activation code!")
 
 
 class DebugPage(webapp.RequestHandler):
@@ -123,6 +177,7 @@ class DebugPage(webapp.RequestHandler):
 def main():
   pages = [
     ('/', IndexPage),
+    ('/activate', ActivationPage),
     ('/debug', DebugPage),
     ('/login', LoginPage),
     ('/logout', LogoutPage),

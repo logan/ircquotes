@@ -15,6 +15,7 @@ class Pusher:
 
   def post(self, uri, **params):
     params = urllib.urlencode(params)
+    print params
     f = urllib.urlopen('%s%s' % (self.appbase, uri), params)
     return pickle.load(f)
 
@@ -39,6 +40,38 @@ def MigrateAccounts(pusher):
       break
 
 
+def MigrateQuotes(pusher):
+  print "Clearing all quotes!!!"
+  result = pusher.post('/quote', clear=1)
+  cursor = pusher.cursor()
+  cursor.execute("SELECT quote_id, user_id, UNIX_TIMESTAMP(submit_time), quote"
+                 ", network, server, channel, note"
+                 ", UNIX_TIMESTAMP(modify_time)"
+                 " FROM quotes")
+  rows = cursor.fetchall()
+  batch_size = 1
+  for start in xrange(0, len(rows), batch_size):
+    params = {}
+    for i, quote in enumerate(rows[start:start+batch_size]):
+      (legacy_id, legacy_user_id, submitted, source, network, server, channel,
+       note, modified) = quote
+      params['legacy_id%d' % i] = legacy_id
+      params['legacy_user_id%d' % i] = legacy_user_id
+      params['submitted%d' % i] = submitted
+      params['source%d' % i] = source
+      params['network%d' % i] = network
+      params['server%d' % i] = server
+      params['channel%d' % i] = channel
+      params['note%d' % i] = note
+      if modified:
+        params['modified%d' % i] = modified
+    print "Uploading %d quotes..." % (i + 1)
+    result = pusher.post('/quote', **params)
+    if not result['ok']:
+      print "Error!  %s" % result['error']
+      break
+
+
 def main():
   parser = OptionParser()
   parser.add_option('-H', '--dbhost', dest='dbhost', default='localhost')
@@ -58,7 +91,8 @@ def main():
 
   pusher = Pusher(conn, options.appbase)
 
-  MigrateAccounts(pusher)
+  #MigrateAccounts(pusher)
+  MigrateQuotes(pusher)
 
 
 if __name__ == '__main__':
