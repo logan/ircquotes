@@ -29,7 +29,7 @@
     <span class="quote_date">Submitted: {{ quote.submitted }}</span>
     <span class="quote_date">Last Modified: {{ quote.modified }}</span>
   </div>
-  <pre class="quote_source">{{ quote.source|escape }}</pre>
+  <div class="quote_source"><pre>{{ quote.source|escape }}</pre></div>
   <div class="quote_footer">
 {% if quote.note %}
     <div class="quote_note roundbottom">

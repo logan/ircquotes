@@ -11,12 +11,13 @@
       {% if account %}
         <h1>Hello, {{ account.name }}</h1>
         <ul>
-          <li><a href="/logout">Logout</a></li>
+          <li><a href="/logout?url={{ request.path_qs|urlencode }}">Logout</a></li>
         </ul>
       {% else %}
         <h1>Sign In</h1>
-        <iframe src="/login?url=/"></iframe>
+        <iframe src="/login?url={{ request.path_qs|urlencode }}"></iframe>
       {% endif %}
+      <pre>{{ request.path_qs|escape }}</pre>
     </div>
     <div class="nav">
       <h1>Quotes</h1>
@@ -30,6 +31,8 @@
         {% block content %}
         {% endblock %}
       </div>
+      <div style="float: right">&nbsp;</div>
     </div>
   </body>
 </html>
+

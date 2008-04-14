@@ -24,6 +24,7 @@ class TemplateHandler(webapp.RequestHandler):
       return
     self.loadSession()
     handler()
+    self['request'] = self.request
     self.exportSession()
     self.render()
 
@@ -75,8 +76,8 @@ class TemplateHandler(webapp.RequestHandler):
     del self.variables[name]
 
   def render(self):
-    path = os.path.join(os.path.dirname(__file__), 'templates', self.path)
-    self.response.out.write(template.render(path, self.variables))
+    path = os.path.join('templates', self.path)
+    self.response.out.write(template.render(path, self.variables, debug=True))
     
 
 class IndexPage(TemplateHandler):
@@ -168,7 +169,7 @@ class LogoutPage(TemplateHandler):
 
   def handleGet(self):
     self.session.account = None
-    self.redirect('/')
+    self.redirect(self.request.get('url', '/'))
 
 
 class ActivationPage(TemplateHandler):
@@ -227,7 +228,7 @@ class DebugPage(webapp.RequestHandler):
       print >> self.response.out, "  %s: %r" % (name, value)
     
 
-def main():
+def real_main():
   pages = [
     ('/', BrowseRecentPage),
     ('/activate', ActivationPage),
@@ -238,6 +239,26 @@ def main():
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)
+
+
+def profile_main():
+  try:
+    import cProfile, pstats
+  except:
+    return real_main()
+  prof = cProfile.Profile()
+  prof = prof.runctx("real_main()", globals(), locals())
+  print '<pre id="profile">'
+  stats = pstats.Stats(prof)
+  stats.sort_stats("time")  # Or cumulative
+  stats.print_stats(80)  # 80 = how many to print
+  # The rest is optional.
+  # stats.print_callees()
+  # stats.print_callers()
+  print "</pre>"
+
+
+main = profile_main
 
 
 if __name__ == '__main__':

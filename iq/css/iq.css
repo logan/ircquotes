@@ -37,12 +37,19 @@ body {
   padding-left: 2em;
 }
 
-#content_container {
+#content_container, #profile {
   background: white;
+  left: 21em;
   margin-top: 0.5em;
   position: absolute;
   top: 0;
-  left: 21em;
+}
+
+#profile {
+  clear: both;
+  left: 0;
+  position: relative;
+  top: 0;
 }
 
 #content {
@@ -82,8 +89,9 @@ body {
   margin-left: 0.5em;
 }
 
-.quote_header .quote_source {
-  margin: 0.5em;
+.quote_source {
+  margin: 0;
+  padding: 0.5em;
   border-left: 0.5em solid #afa;
   border-right: 0.5em solid #afa;
 }
@@ -92,3 +100,4 @@ body {
   margin-left: 0.5em;
   margin-right: 1ex;
 }
+

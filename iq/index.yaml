@@ -17,7 +17,7 @@ indexes:
   - name: network
   - name: protocol
 
-# Used 120 times in query history.
+# Used 157 times in query history.
 - kind: Quote
   properties:
   - name: submitted

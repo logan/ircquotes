@@ -1,5 +1,5 @@
 application: iq
-version: 1
+version: 2
 runtime: python
 api_version: 1
 
@@ -8,7 +8,7 @@ handlers:
   script: legacy.py
 - url: /(.*\.(css|js))
   static_files: \2/\1
-  upload: (.*)/(.*)
+  upload: (css|js)/(.*)
   expiration: 1d
 - url: /.*
   script: web.py
