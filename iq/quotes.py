@@ -64,3 +64,35 @@ class Quote(db.Model):
   source = db.TextProperty(required=True)
   note = db.TextProperty()
   legacy_id = db.IntegerProperty()
+
+  @staticmethod
+  def getByLegacyId(legacy_id):
+    return Quote.all().filter('legacy_id =', legacy_id).get()
+
+
+class Rating(db.Model):
+  account = db.ReferenceProperty(accounts.Account, required=True)
+  quote = db.ReferenceProperty(Quote, required=True)
+  value = db.IntegerProperty(required=True)
+  submitted = db.DateTimeProperty(required=True, auto_now=True)
+
+  @staticmethod
+  def rate(account, quote, value):
+    query = Rating.all()
+    query.filter('account =', account)
+    query.filter('quote =', quote)
+    rating = query.get()
+    if not rating:
+      rating = Rating(parent=account,
+                      account=account,
+                      quote=quote,
+                      value=value,
+                     )
+      rating.put()
+    return rating
+
+  @staticmethod
+  def getRatingsByQuote(quote):
+    query = Rating.all()
+    query.filter('quote =', quote)
+    return query

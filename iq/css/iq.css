@@ -1,0 +1,94 @@
+body {
+  background: #bdf;
+  font-family: Verdana, Helvetica, Arial, sans-serif;
+  font-size: 10pt;
+  margin: 0;
+}
+
+#login_form {
+  background: #fff;
+}
+
+.nav {
+  background: #fff;
+  margin: 0.5em;
+  width: 20em;
+}
+
+.nav a {
+  color: #343;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.nav h1 {
+  background: #afa;
+  color: #343;
+  font-weight: bold;
+  font-size: small;
+  margin: 0;
+  padding: 0;
+  padding-bottom: 0.5em;
+  text-align: center;
+}
+
+.nav ul {
+  margin: 0.2em;
+  padding-left: 2em;
+}
+
+#content_container {
+  background: white;
+  margin-top: 0.5em;
+  position: absolute;
+  top: 0;
+  left: 21em;
+}
+
+#content {
+  padding: 0.5em;
+}
+
+.user iframe {
+  border: none;
+  width: 20em;
+}
+
+.label, .control {
+  font-weight: bold;
+  text-align: right;
+}
+
+.error {
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}
+
+.quote {
+  margin-bottom: 2em;
+}
+
+.quote_header, .quote_note {
+  background: #afa;
+  color: #343;
+  font-weight: bold;
+  font-size: small;
+  margin: 0;
+}
+
+.quote_header span {
+  display: block;
+  margin-left: 0.5em;
+}
+
+.quote_header .quote_source {
+  margin: 0.5em;
+  border-left: 0.5em solid #afa;
+  border-right: 0.5em solid #afa;
+}
+
+.quote_note span {
+  margin-left: 0.5em;
+  margin-right: 1ex;
+}

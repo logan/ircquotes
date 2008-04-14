@@ -1,5 +1,8 @@
 <html>
   <head>
+    <link rel="stylesheet" type="text/css" href="/iq.css">
+    <script src="/MochiKit.js"></script>
+    <script src="/iq.js"></script>
     <title>IQ: {% block subtitle %}Accounting for Taste{% endblock %}</title>
   </head>
   <body>
@@ -7,16 +10,26 @@
     <div class="user nav">
       {% if account %}
         <h1>Hello, {{ account.name }}</h1>
-        <a href="/logout">Logout</a>
+        <ul>
+          <li><a href="/logout">Logout</a></li>
+        </ul>
       {% else %}
         <h1>Sign In</h1>
-        <iframe src="/login?url=/">
+        <iframe src="/login?url=/"></iframe>
       {% endif %}
     </div>
+    <div class="nav">
+      <h1>Quotes</h1>
+      <ul>
+        <li><a href="/browse-recent">Recent</a></li>
+      </ul>
+    </div>
     {% endblock %}
-    <div class="content">
-      {% block content %}
-      {% endblock %}
+    <div id="content_container">
+      <div id="content">
+        {% block content %}
+        {% endblock %}
+      </div>
     </div>
   </body>
 </html>

@@ -96,6 +96,49 @@ class IndexPage(TemplateHandler):
     self['limit'] = limit
 
 
+class BrowsePage(TemplateHandler):
+  PAGE_SIZE = 10
+
+  path = 'browse.html'
+
+  def handleGet(self):
+    self.page_size = BrowsePage.PAGE_SIZE
+    self['limit'] = self.page_size
+    self['mode'] = self.mode
+    self['quotes'] = self.getQuotes()
+
+
+class BrowseRecentPage(BrowsePage):
+  mode = 'recent'
+
+  def getQuotes(self):
+    start = None
+    try:
+      start = int(self.request.get('start'))
+    except ValueError:
+      pass
+    offset = 0
+    try:
+      offset = int(self.request.get('offset'))
+    except ValueError:
+      pass
+    query = quotes.Quote.all()
+    if start is not None:
+      logging.info('submitted <= %s', start)
+      query.filter('submitted <=', datetime.datetime.utcfromtimestamp(start))
+    query.order('-submitted')
+    qs = query.fetch(offset=offset, limit=self.page_size)
+    if len(qs) == self.page_size:
+      for i in xrange(2, self.page_size + 1):
+        if qs[-i].submitted != qs[-1].submitted:
+          break
+      self['next_start'] = int(time.mktime(qs[-1].submitted.utctimetuple()))
+      self['next_offset'] = i - 1
+    else:
+      self['end'] = True
+    return qs
+
+
 class LoginPage(TemplateHandler):
   path = 'login.html'
 
@@ -186,8 +229,9 @@ class DebugPage(webapp.RequestHandler):
 
 def main():
   pages = [
-    ('/', IndexPage),
+    ('/', BrowseRecentPage),
     ('/activate', ActivationPage),
+    ('/browse-recent', BrowseRecentPage),
     ('/debug', DebugPage),
     ('/login', LoginPage),
     ('/logout', LogoutPage),

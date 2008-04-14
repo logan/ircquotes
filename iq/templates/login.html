@@ -1,5 +1,6 @@
 <html>
   <head>
+    <link rel="stylesheet" type="text/css" href="/iq.css">
     {% if account and session.url_on_login %}
     <script>
 window.top.location = "{{ session.url_on_login|urlencode }}";
@@ -11,20 +12,8 @@ window.top.location = "/activate?name={{ name|urlencode }}";
     </script>
     {% endif %}
     <title>IQ: Login</title>
-    <style>
-.label, .control {
-  font-weight: bold;
-  text-align: right;
-}
-
-.error {
-  font-weight: bold;
-  color: red;
-  text-align: center;
-}
-    </style>
   </head>
-  <body>
+  <body id="login_form">
     <form method="POST">
       <table>
         <tr>

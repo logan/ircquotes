@@ -16,3 +16,13 @@ indexes:
   - name: location
   - name: network
   - name: protocol
+
+# Used 120 times in query history.
+- kind: Quote
+  properties:
+  - name: submitted
+    direction: desc
+
+# Used 5 times in query history.
+- kind: Rating
+  ancestor: yes

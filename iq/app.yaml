@@ -6,5 +6,9 @@ api_version: 1
 handlers:
 - url: /legacy/.*
   script: legacy.py
+- url: /(.*\.(css|js))
+  static_files: \2/\1
+  upload: (.*)/(.*)
+  expiration: 1d
 - url: /.*
   script: web.py

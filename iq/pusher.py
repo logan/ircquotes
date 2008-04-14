@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import logging
 from optparse import OptionParser
 import MySQLdb
 import pickle
@@ -14,10 +15,53 @@ class Pusher:
     return self.conn.cursor()
 
   def post(self, uri, **params):
-    params = urllib.urlencode(params)
-    print params
-    f = urllib.urlopen('%s%s' % (self.appbase, uri), params)
+    ps = []
+    for key, value in params.iteritems():
+      if isinstance(value, (tuple, list)):
+        for subvalue in value:
+          ps.append((key, subvalue))
+      else:
+        ps.append((key, value))
+    ps = urllib.urlencode(ps)
+    f = urllib.urlopen('%s%s' % (self.appbase, uri), ps)
     return pickle.load(f)
+
+
+def MigrateRatings(pusher):
+  cursor = pusher.cursor()
+  cursor.execute("SELECT user_id FROM users")
+  for i, (user_id,) in enumerate(cursor.fetchall()):
+    logging.info('Migrating ratings for user %d/%d', i + 1, cursor.rowcount)
+    cursor.execute("SELECT quote_id, rating, UNIX_TIMESTAMP(rate_time)"
+                   " FROM ratings WHERE user_id = %s", user_id)
+    legacy_quote_ids = []
+    values = []
+    submitted = []
+    for quote_id, rating, rate_time in cursor.fetchall():
+      legacy_quote_ids.append(quote_id)
+      values.append(rating)
+      submitted.append(rate_time)
+    logging.info('Clearing for %d', user_id)
+    result = pusher.post('/rating', legacy_user_id=user_id, clear=1)
+    if not result['ok']:
+      print 'Error!  %s' % result['error']
+      break
+    if values:
+      logging.info('Uploading %d ratings...', len(values))
+      batch_size = 100
+      for j in xrange(0, len(values), batch_size):
+        logging.info('Posting %d-%d...', j + 1, j + batch_size)
+        result = pusher.post('/rating',
+                             legacy_user_id=user_id,
+                             legacy_quote_id=legacy_quote_ids[j:j+batch_size],
+                             value=values[j:j+batch_size],
+                             submitted=submitted[j:j+batch_size],
+                            )
+        if not result['ok']:
+          print 'Error!  %s' % result['error']
+          break
+    else:
+      logging.info('No ratings to migrate')
 
 
 def MigrateAccounts(pusher):
@@ -92,7 +136,8 @@ def main():
   pusher = Pusher(conn, options.appbase)
 
   #MigrateAccounts(pusher)
-  MigrateQuotes(pusher)
+  #MigrateQuotes(pusher)
+  MigrateRatings(pusher)
 
 
 if __name__ == '__main__':
