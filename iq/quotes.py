@@ -57,10 +57,10 @@ class DialogLine(db.Model):
   signature = db.StringProperty()
 
   @staticmethod
-  def parse(source):
+  def parse(quote):
     # XXX: Naive parsing for now
-    for i, line in enumerate(source.split('\n')):
-      yield DialogLine(offset=i, text=line)
+    for i, line in enumerate(quote.dialog_source.split('\n')):
+      yield DialogLine(ancestor=quote, offset=i, text=line)
 
 
 class Quote(db.Model):
@@ -89,7 +89,7 @@ class Quote(db.Model):
     return Quote.all().filter('legacy_id =', legacy_id).get()
 
   def updateDialog(self):
-    new_lines = list(DialogLine.parse(self.dialog_source))
+    new_lines = list(DialogLine.parse(self))
     old_lines = list(self.getDialog())
     if old_lines:
       db.delete(old_lines)
