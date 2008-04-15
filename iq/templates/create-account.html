@@ -15,6 +15,9 @@ App host: {{ request.application_url }}
 {% endblock %}
 {% block content %}
 {% if account %}
+{%   if testing %}
+<div id="activation_code">{{ account.activation }}</div>
+{%   endif %}
 Thank you, {{ account.name|escape }}, your account has been created!
 An email has been sent to {{ account.email|escape }} to confirm your address.
 When you receive this email, follow the link provided to activate your account

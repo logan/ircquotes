@@ -3,10 +3,10 @@
 {% block user %}{% endblock %}
 {% block content %}
 {% if authenticated %}
-  {% if activated %}
+{%   if activated %}
 Congratuations, {{ account.name }}, your account has been activated!
 <a href="{{ url|urlencode }}">Continue</a>.
-  {% else %}
+{%   else %}
 Welcome, {{ account.name }}!  Your email address is now confirmed.  All you need to do is set a password!
 
 <form method="POST" action="/activate">
@@ -33,15 +33,15 @@ Welcome, {{ account.name }}!  Your email address is now confirmed.  All you need
     </tr>
   </table>
 </form>
-  {% endif %}
+{%   endif %}
 {% else %}
-  {% if account.activation %}
+{%   if account.activation %}
 An activation code has been sent to {{ account.email }}.
 <a href="/activate?name={{ account.name|urlencode }}&send_email=1">Resend email</a>.
-    {% if email_sent %}
+{%     if email_sent %}
 <p>
 <span class="success">Email sent!</span>
-    {% endif %}
-  {% endif %}
+{%     endif %}
+{%   endif %}
 {% endif %}
 {% endblock %}

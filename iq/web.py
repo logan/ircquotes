@@ -26,6 +26,10 @@ class TemplateHandler(webapp.RequestHandler):
     self.loadSession()
     handler()
     self['request'] = self.request
+    if self.request.host.startswith('iq-test'):
+      self['testing'] = True
+    elif self.request.environ['SERVER_SOFTWARE'].startswith('Dev'):
+      self['testing'] = True
     self.exportSession()
     self.render()
 
