@@ -311,10 +311,11 @@ class EditDraftPage(TemplateHandler):
     if not draft:
       logging.info('Draft does not exist!')
       return
-    if draft.parent() == self.account:
+    if draft.parent_key() == self.account.key():
       self['draft'] = draft
     else:
-      logging.info("Attempt to edit someone else's draft!")
+      logging.info("Attempt to edit someone else's draft (user=%s, owner=%s)",
+                   self.account.key(), draft.parent_key())
 
 
 class DebugPage(webapp.RequestHandler):

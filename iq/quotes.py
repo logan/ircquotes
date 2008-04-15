@@ -60,7 +60,7 @@ class DialogLine(db.Model):
   def parse(quote):
     # XXX: Naive parsing for now
     for i, line in enumerate(quote.dialog_source.split('\n')):
-      yield DialogLine(ancestor=quote, offset=i, text=line)
+      yield DialogLine(parent=quote, offset=i, text=line)
 
 
 class Quote(db.Model):
@@ -74,7 +74,7 @@ class Quote(db.Model):
 
   @staticmethod
   def createDraft(account, source, context=None, note=None):
-    quote = Quote(ancestor=account,
+    quote = Quote(parent=account,
                   draft=True,
                   context=context,
                   dialog_source=source,
@@ -89,11 +89,24 @@ class Quote(db.Model):
     return Quote.all().filter('legacy_id =', legacy_id).get()
 
   def updateDialog(self):
+    def debug(lines):
+      for line in lines:
+        logging.info("line parent: %s", line.parent_key())
+
     new_lines = list(DialogLine.parse(self))
     old_lines = list(self.getDialog())
+
+    logging.info("old lines for %s", self.key())
+    debug(old_lines)
+    logging.info("new lines for %s", self.key())
+    debug(new_lines)
+
     if old_lines:
       db.delete(old_lines)
-    db.put(new_lines)
+    #db.put(new_lines)
+    for line in new_lines:
+      line.put()
+      logging.info("Saved line for %s", self.key())
     return new_lines
 
   def getDialog(self):
