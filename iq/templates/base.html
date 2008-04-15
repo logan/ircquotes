@@ -16,9 +16,27 @@
       {% else %}
         <h1>Sign In</h1>
         <iframe src="/login?url={{ request.path_qs|urlencode }}"></iframe>
+        <ul>
+          <li>
+            <a href="/remember-account?url={{ request.path_qs|urlencode }}">
+              Account name reminder
+            </a>
+          </li>
+          <li>
+            <a href="/reset-account?url={{ request.path_qs|urlencode }}">
+              Reset password
+            </a>
+          </li>
+          <li>
+            <a href="/create-account?url={{ request.path_qs|urlencode }}">
+              Create a new account
+            </a>
+          </li>
+        </ul>
       {% endif %}
-      <pre>{{ request.path_qs|escape }}</pre>
     </div>
+    {% endblock %}
+    {% block nav %}
     <div class="nav">
       <h1>Quotes</h1>
       <ul>

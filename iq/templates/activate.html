@@ -5,7 +5,7 @@
 {% if authenticated %}
   {% if activated %}
 Congratuations, {{ account.name }}, your account has been activated!
-<a href="{{ account.activation_url }}">Continue</a>.
+<a href="{{ url|urlencode }}">Continue</a>.
   {% else %}
 Welcome, {{ account.name }}!  Your email address is now confirmed.  All you need to do is set a password!
 

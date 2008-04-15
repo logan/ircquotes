@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block user %}
+{% endblock %}
+{% block nav %}
+<div class="nav">
+  <h1>Account Creation</h1>
+  <p>
+    All you need to create a free account is a valid email address.
+    Just enter the name you want to use on this site and your email address,
+    and we will reserve your account and send you an email to confirm your
+    address.  After you confirm your address, you will be able to set a
+    password and log into the site.
+  </p>
+App host: {{ request.application_url }}
+{% endblock %}
+{% block content %}
+{% if account %}
+Thank you, {{ account.name|escape }}, your account has been created!
+An email has been sent to {{ account.email|escape }} to confirm your address.
+When you receive this email, follow the link provided to activate your account
+and set your password.
+{% else %}
+<form method="POST" action="/create-account">
+  <input type="hidden" name="url" value="{{ url|escape }}">
+  <table class="form">
+    <tr>
+      <td class="label">Account name:</td>
+      <td><input name="name" value="{{ name|escape }}"></td>
+      <td>
+{%   if name_conflict %}
+        <span class="error">
+          An account with this name already exists.
+{%     if name_conflict.password %}
+          If you've already created this account, but are having trouble
+          logging in, you can reset your password.
+          <a href="/reset-account?name={{ name|urlencode }}&url={{ url|urlencode }}">
+            Reset my password
+          </a>
+{%     else %}
+          If you've already requested this account, then you should have
+          received an email at the address you provided.
+          <a href="/activate?name={{ name_conflict.name|urlencode }}&send_email=1">
+            Resend this email.
+          </a>
+{%     endif %}
+        </span>
+{%   endif %}
+{%   if name_needed %}
+        <span class="error">You must choose a name for this account.</span>
+{%   endif %}
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Email address:</td>
+      <td><input name="email" value="{{ email|escape }}"></td>
+      <td>
+{%   if email_conflict %}
+        <span class="error">
+          An account with this email address already exists.
+{%     if email_conflict.password %}
+          If you've already created this account, but are having trouble
+          logging in, you can reset your password.
+          <a href="/reset-account?name={{ email_conflict.name|urlencode }}&url={{ url|urlencode }}">
+            Reset my password
+          </a>
+{%     else %}
+          If you've already requested this account, then you should have
+          received an email at the address you provided.
+          <a href="/activate?name={{ email_conflict.name|urlencode }}&send_email=1">
+            Resend this email.
+          </a>
+{%     endif %}
+        </span>
+{%   endif %}
+{%   if email_invalid %}
+        <span class="error">This doesn't look like a valid email address.</span>
+{%   endif %}
+{%   if email_needed %}
+        <span class="error">You must provide a working email address in order to create an account.</span>
+{%   endif %}
+      </td>
+    </tr>
+{%   if error %}
+    <tr>
+      <td colspan="2" class="error">{{ error }}</td>
+    </tr>
+{%   endif %}
+    <tr>
+      <td colspan="2" class="control">
+        <input type="submit" value="Create Account">
+      </td>
+    </tr>
+  </table>
+</form>
+{% endif %}
+{% endblock %}

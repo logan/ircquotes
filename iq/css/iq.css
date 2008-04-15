@@ -40,12 +40,14 @@ body {
 #content_container, #profile {
   background: white;
   left: 21em;
+  right: 0.5em;
   margin-top: 0.5em;
   position: absolute;
   top: 0;
 }
 
 #profile {
+  display: none;
   clear: both;
   left: 0;
   position: relative;
@@ -59,6 +61,10 @@ body {
 .user iframe {
   border: none;
   width: 20em;
+}
+
+table.form td {
+  vertical-align: top;
 }
 
 .label, .control {

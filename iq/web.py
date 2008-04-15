@@ -158,7 +158,7 @@ class LoginPage(TemplateHandler):
     except accounts.Account.InvalidPasswordException:
       self['error'] = 'password incorrect'
     except accounts.Account.NotActivatedException:
-      accounts.Account.setupActivation(name, self.session.url_on_login)
+      #accounts.Account.setupActivation(name, self.session.url_on_login)
       self['error'] = 'account not activated'
       self['activate'] = True
       self['name'] = name
@@ -206,6 +206,7 @@ class ActivationPage(TemplateHandler):
         account.put()
         self.setAccount(account)
         self['activated'] = True
+        self['url'] = account.activation_url
         return
       elif password != password_confirmation:
         logging.info("passwords didn't match")
@@ -215,6 +216,44 @@ class ActivationPage(TemplateHandler):
         self['error'] = 'Please choose a password'
     else:
       logging.info("password form lost activation code!")
+
+
+class CreateAccountPage(TemplateHandler):
+  path = 'create-account.html'
+
+  def handleGet(self):
+    self['url'] = self.request.get('url')
+
+  def handlePost(self):
+    errors = []
+    url = self.request.get('url')
+    self['url'] = url
+    name = self.request.get('name')
+    email = self.request.get('email')
+    ok = name and email
+    if name:
+      self['name'] = name
+      account = accounts.Account.getByName(name)
+      if account:
+        self['name_conflict'] = account
+        ok = False
+    elif email:
+      self['name_needed'] = True
+    if email:
+      self['email'] = email
+      account = accounts.Account.getByEmail(email)
+      if account:
+        self['email_conflict'] = account
+        ok = False
+      elif not accounts.Account.validateEmail(email):
+        self['email_invalid'] = True
+        ok = False
+    elif name:
+      self['email_needed'] = True
+    if ok:
+      account = accounts.Account.create(name, email)
+      account.setupActivation(self.request.application_url, url)
+      self['account'] = account
 
 
 class DebugPage(webapp.RequestHandler):
@@ -232,6 +271,7 @@ def real_main():
   pages = [
     ('/', BrowseRecentPage),
     ('/activate', ActivationPage),
+    ('/create-account', CreateAccountPage),
     ('/browse-recent', BrowseRecentPage),
     ('/debug', DebugPage),
     ('/login', LoginPage),
@@ -258,7 +298,7 @@ def profile_main():
   print "</pre>"
 
 
-main = profile_main
+main = real_main
 
 
 if __name__ == '__main__':
