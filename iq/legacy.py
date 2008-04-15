@@ -78,7 +78,7 @@ class QuotePage(MigratorPage):
       logging.info('Importing quote %d', i)
       legacy_id = int(self.request.get('legacy_id%d' % i))
       legacy_user_id = int(self.request.get('legacy_user_id%d' % i))
-      author = quotes.Account.getByLegacyId(legacy_user_id)
+      author = accounts.Account.getByLegacyId(legacy_user_id)
       submitted = self.getTimestamp('submitted%d' % i)
       modified = self.getTimestamp('modified%d' % i) or submitted
       network = self.request.get('network%d' % i)
@@ -135,7 +135,7 @@ class AccountPage(MigratorPage):
   def post(self):
     values = {}
     def CheckForDuplicates(property, value):
-      if quotes.Account.all().filter('%s =' % property, value).get():
+      if accounts.Account.all().filter('%s =' % property, value).get():
         raise ValueError('%s %r already in use' % (property, value))
       if value in values.setdefault(property, set()):
         raise ValueError('%s %r already in use' % (property, value))
