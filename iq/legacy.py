@@ -148,11 +148,11 @@ class AccountPage(MigratorPage):
       created_timestamp = int(self.request.get('created%d' % i))
       created = datetime.datetime.utcfromtimestamp(created_timestamp)
 
-      account = quotes.Account(legacy_id=legacy_id,
-                               name=name,
-                               email=email,
-                               created=created,
-                              )
+      account = accounts.Account(legacy_id=legacy_id,
+                                 name=name,
+                                 email=email,
+                                 created=created,
+                                )
       logging.info("Importing legacy_id=%d", legacy_id)
       account.put()
 

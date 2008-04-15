@@ -151,7 +151,7 @@ Dear %(name)s,
 Welcome to IrcQuotes!  Before you can log into the site, you will need to
 activate your account.  Simply visit the URL below to activate your account:
 
-http://%(base_url)s/activate?name=%(name)s&activation=%(activation)s
+%(base_url)s/activate?name=%(name)s&activation=%(activation)s
 
 Thank you for registering!
 IrcQuotes Administration''' % {
@@ -188,5 +188,9 @@ class Session(db.Expando):
       session.put()
     return session
 
-
-
+  @staticmethod
+  def deleteAllEntities():
+    query = Session.all().fetch(limit=100)
+    for i, session in enumerate(query):
+      session.delete()
+    return i == 100

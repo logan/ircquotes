@@ -6,6 +6,7 @@ import wsgiref.handlers
 
 from google.appengine.api import users
 from google.appengine.ext import webapp
+from google.appengine.ext import db
 from google.appengine.ext.webapp import template
 
 import accounts
@@ -265,12 +266,64 @@ class DebugPage(webapp.RequestHandler):
     print >> self.response.out, "\nEnvironment:\n"
     for name, value in self.request.environ.iteritems():
       print >> self.response.out, "  %s: %r" % (name, value)
+
+
+class ClearDataStorePage(webapp.RequestHandler):
+  @staticmethod
+  def deleteAllKindEntities(kind, batch_size):
+    logging.info('Deleting all of a kind: %r', kind)
+    query = kind.all().fetch(limit=batch_size)
+    i = 0
+    for i, entity in enumerate(query):
+      logging.info("  Deleting %s %s", kind, i)
+      entity.delete()
+    return i + 1 == batch_size
+
+  def get(self):
+    batch_size = 100
+    if not self.request.get('worker'):
+      return self.start()
+    counter = 0
+    try:
+      counter = int(self.request.get('counter'))
+    except ValueError:
+      pass
+    modules = [accounts, quotes]
+    for module in modules:
+      for value in module.__dict__.itervalues():
+        if isinstance(value, type) and issubclass(value, db.Model):
+          if self.deleteAllKindEntities(value, batch_size):
+            self.continuation(value.__name__, counter + batch_size)
+            return
+    self.response.headers['Content-type'] = 'text/plain'
+    print >> self.response.out, "Cleared the data store!"
+
+  def start(self):
+    out = self.response.out
+    print >> out, '<html>'
+    print >> out, '<body>'
+    print >> out, '<span id="m">&nbsp;</span>'
+    print >> out, '<iframe src="/clear-data-store?worker=1"></iframe>'
+    print >> out, '</body>'
+    print >> out, '</html>'
+
+  def continuation(self, culprit, counter):
+    out = self.response.out
+    print >> out, '<html>'
+    print >> out, '<body>Still working on %s...</body>' % culprit
+    print >> out, '<script>'
+    print >> out, 'var m = window.top.document.getElementById("m");'
+    print >> out, 'm.innerHTML = "[%d] Working on %s...";' % (counter, culprit)
+    print >> out, 'window.location = "/clear-data-store?worker=1&counter=%d";' % counter
+    print >> out, '</script>'
+    print >> out, '</html>'
     
 
 def real_main():
   pages = [
     ('/', BrowseRecentPage),
     ('/activate', ActivationPage),
+    ('/clear-data-store', ClearDataStorePage),
     ('/create-account', CreateAccountPage),
     ('/browse-recent', BrowseRecentPage),
     ('/debug', DebugPage),

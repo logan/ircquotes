@@ -135,9 +135,9 @@ def main():
 
   pusher = Pusher(conn, options.appbase)
 
-  #MigrateAccounts(pusher)
+  MigrateAccounts(pusher)
   #MigrateQuotes(pusher)
-  MigrateRatings(pusher)
+  #MigrateRatings(pusher)
 
 
 if __name__ == '__main__':
