@@ -280,9 +280,10 @@ class ClearDataStorePage(webapp.RequestHandler):
     return i + 1 == batch_size
 
   def get(self):
-    batch_size = 100
+    batch_size = 20
     if not self.request.get('worker'):
       return self.start()
+    kind = self.request.get('kind')
     counter = 0
     try:
       counter = int(self.request.get('counter'))
@@ -293,6 +294,8 @@ class ClearDataStorePage(webapp.RequestHandler):
       for value in module.__dict__.itervalues():
         if isinstance(value, type) and issubclass(value, db.Model):
           if self.deleteAllKindEntities(value, batch_size):
+            if value.__name__ != kind:
+              counter = 0
             self.continuation(value.__name__, counter + batch_size)
             return
     self.response.headers['Content-type'] = 'text/plain'
@@ -314,7 +317,7 @@ class ClearDataStorePage(webapp.RequestHandler):
     print >> out, '<script>'
     print >> out, 'var m = window.top.document.getElementById("m");'
     print >> out, 'm.innerHTML = "[%d] Working on %s...";' % (counter, culprit)
-    print >> out, 'window.location = "/clear-data-store?worker=1&counter=%d";' % counter
+    print >> out, 'window.location = "/clear-data-store?worker=1&kind=%s&&counter=%d";' % (culprit, counter)
     print >> out, '</script>'
     print >> out, '</html>'
     
