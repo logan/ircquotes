@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block subtitle %}Edit Draft{% endblock %}
+{% block content %}
+{%   if draft %}
+<h1>Editing Draft</h1>
+<form method="POST" action="/edit-draft">
+  <input type="hidden" name="key" value="{{key}}">
+  <table class="form">
+    <tr>
+      <td class="label">Quote:</td>
+      <td>
+        <textarea name="dialog" rows="10" cols="80"></textarea>
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2">
+        <input type="submit" name="save" value="Save Draft">
+        <input type="submit" name="discard" value="Discard Draft">
+        <input type="submit" name="publish" value="Publish Changes">
+      </td>
+    </tr>
+  </table>
+</form>
+{%   else %}
+Draft {{key}} does not exist!
+{%   endif %}
+{% endblock %}

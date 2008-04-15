@@ -49,50 +49,52 @@ class Context(db.Model):
     return context
 
 
-class Comment(db.Model):
-  author = db.UserProperty()
-  submitted = db.DateTimeProperty(required=True, auto_now_add=True)
-  modified = db.DateTimeProperty(required=True, auto_now=True)
-  source = db.TextProperty(required=True)
-  
+class DialogLine(db.Model):
+  offset = db.IntegerProperty(required=True)
+  time = db.TimeProperty()
+  actor = db.StringProperty()
+  text = db.TextProperty(required=True)
+  signature = db.StringProperty()
+
+  @staticmethod
+  def parse(source):
+    # XXX: Naive parsing for now
+    for i, line in enumerate(source.split('\n')):
+      yield DialogLine(offset=i, text=line)
+
 
 class Quote(db.Model):
-  author = db.ReferenceProperty(accounts.Account)
+  draft = db.BooleanProperty(required=True, default=True)
   submitted = db.DateTimeProperty(required=True, auto_now_add=True)
   modified = db.DateTimeProperty(required=True, auto_now=True)
   context = db.ReferenceProperty(Context)
-  source = db.TextProperty(required=True)
+  dialog_source = db.TextProperty(required=True)
   note = db.TextProperty()
   legacy_id = db.IntegerProperty()
+
+  @staticmethod
+  def createDraft(account, source, context=None, note=None):
+    quote = Quote(ancestor=account,
+                  draft=True,
+                  context=context,
+                  dialog_source=source,
+                  note=note,
+                 )
+    quote.put()
+    quote.updateDialog()
+    return quote
 
   @staticmethod
   def getByLegacyId(legacy_id):
     return Quote.all().filter('legacy_id =', legacy_id).get()
 
+  def updateDialog(self):
+    new_lines = list(DialogLine.parse(self.dialog_source))
+    old_lines = list(self.getDialog())
+    if old_lines:
+      db.delete(old_lines)
+    db.put(new_lines)
+    return new_lines
 
-class Rating(db.Model):
-  account = db.ReferenceProperty(accounts.Account, required=True)
-  quote = db.ReferenceProperty(Quote, required=True)
-  value = db.IntegerProperty(required=True)
-  submitted = db.DateTimeProperty(required=True, auto_now=True)
-
-  @staticmethod
-  def rate(account, quote, value):
-    query = Rating.all()
-    query.filter('account =', account)
-    query.filter('quote =', quote)
-    rating = query.get()
-    if not rating:
-      rating = Rating(parent=account,
-                      account=account,
-                      quote=quote,
-                      value=value,
-                     )
-      rating.put()
-    return rating
-
-  @staticmethod
-  def getRatingsByQuote(quote):
-    query = Rating.all()
-    query.filter('quote =', quote)
-    return query
+  def getDialog(self):
+    return DialogLine.all().ancestor(self)

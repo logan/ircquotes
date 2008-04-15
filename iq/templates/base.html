@@ -6,14 +6,14 @@
     <title>IQ: {% block subtitle %}Accounting for Taste{% endblock %}</title>
   </head>
   <body>
-    {% block user %}
+{% block user %}
     <div class="user nav">
-      {% if account %}
+{%   if account.trusted %}
         <h1>Hello, {{ account.name }}</h1>
         <ul>
           <li><a href="/logout?url={{ request.path_qs|urlencode }}">Logout</a></li>
         </ul>
-      {% else %}
+{%   else %}
         <h1>Sign In</h1>
         <iframe src="/login?url={{ request.path_qs|urlencode }}"></iframe>
         <ul>
@@ -33,21 +33,37 @@
             </a>
           </li>
         </ul>
-      {% endif %}
+{%   endif %}
     </div>
-    {% endblock %}
-    {% block nav %}
+{% endblock %}
+{% block nav %}
     <div class="nav">
       <h1>Quotes</h1>
       <ul>
         <li><a href="/browse-recent">Recent</a></li>
       </ul>
+{% if account.trusted %}
+      <ul>
+        <li><a href="/submit">Submit a quote</a></li>
+      </ul>
+{% endif %}
     </div>
-    {% endblock %}
+{% endblock %}
+{% if testing and mailer.account %}
+    <div class="nav">
+      <h1>Email Sent</h1>
+      <pre>
+To: {{mailer.account.email|escape}}
+Subject: {{mailer.subject|escape}}
+
+{{mailer.body|escape}}
+      </pre>
+    </div>
+{% endif %}
     <div id="content_container">
       <div id="content">
-        {% block content %}
-        {% endblock %}
+{% block content %}
+{% endblock %}
       </div>
       <div style="float: right">&nbsp;</div>
     </div>

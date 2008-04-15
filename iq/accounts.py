@@ -6,6 +6,18 @@ from google.appengine.api import mail
 from google.appengine.ext import db
 
 import hash
+import mailer
+
+ACTIVATION_EMAIL_TEMPLATE = '''Dear %(name)s,
+
+Welcome to IrcQuotes!  Before you can log into the site, you will need to
+activate your account.  Simply visit the URL below to activate your account:
+
+%(base_url)s/activate?name=%(name)s&activation=%(activation)s
+
+Thank you for registering!
+IrcQuotes Administration'''
+
 
 class InvalidName(Exception):
   INVALID_CHARACTER = ('An account name may only contain letters, numerals,'
@@ -37,6 +49,7 @@ class Account(db.Model):
   activated = db.DateTimeProperty()
   active = db.DateTimeProperty(required=True, auto_now=True)
   legacy_id = db.IntegerProperty()
+  trusted = db.BooleanProperty(default=True)
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
@@ -93,9 +106,21 @@ class Account(db.Model):
     return Account.all().filter('normalized_email =', email).get()
 
   @staticmethod
+  def getAnonymous():
+    account = Account.all().filter('trusted =', False).get()
+    if account is None:
+      account = Account(name='Anonymous',
+                        email='anonymous@ircquotes.com',
+                        activated=datetime.datetime.now(),
+                        trusted=False,
+                       )
+      account.put()
+    return account
+
+  @staticmethod
   def login(name, password):
     account = Account.getByName(name)
-    if not account:
+    if not account or not account.trusted:
       raise NoSuchNameException
     if account.password is None:
       raise NotActivatedException
@@ -112,33 +137,23 @@ class Account(db.Model):
     account.put()
     return account
 
-  def setupActivation(self, base_url, destination_url):
+  def setupActivation(self, mailer, base_url, destination_url):
     if not self.activation:
       self.activation = hash.generate()
       self.activation_url = destination_url
       self.put()
       logging.info("Activating account: name=%r, email=%r, activation=%r",
                    self.name, self.email, self.activation)
-      self.sendConfirmationEmail(base_url)
+      self.sendConfirmationEmail(mailer, base_url)
 
-  def sendConfirmationEmail(self, base_url):
-    mail.send_mail(sender='IrcQuotes Adminstration <logan.hanks@gmail.com>',
-                   to='%s <%s>' % (self.name, self.email),
-                   subject='IrcQuotes Account Activation',
-                   body='''
-Dear %(name)s,
-
-Welcome to IrcQuotes!  Before you can log into the site, you will need to
-activate your account.  Simply visit the URL below to activate your account:
-
-%(base_url)s/activate?name=%(name)s&activation=%(activation)s
-
-Thank you for registering!
-IrcQuotes Administration''' % {
-                     'name': self.name,
-                     'activation': self.activation,
-                     'base_url': base_url,
-                   })
+  def sendConfirmationEmail(self, mailer, base_url):
+    mailer.send(account=self,
+                subject='IrcQuotes Account Activation',
+                body=ACTIVATION_EMAIL_TEMPLATE % {
+                  'name': self.name,
+                  'activation': self.activation,
+                  'base_url': base_url,
+                })
 
 
 class Session(db.Expando):
@@ -164,7 +179,10 @@ class Session(db.Expando):
     session = Session.get_by_key_name(session_id)
     if session is None:
       logging.info("Creating new session: %s", session_id)
-      session = Session(key_name=session_id, id=session_id)
+      session = Session(key_name=session_id,
+                        id=session_id,
+                        account=Account.getAnonymous(),
+                       )
       session.put()
     return session
 

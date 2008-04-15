@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block subtitle %}Account Activation{% endblock %}
-{% block user %}{% endblock %}
+{% block user %}
+{%   if authenticated and activated %}
+{{ block.super }}
+{%   endif %}
+{% endblock %}
 {% block content %}
 {% if authenticated %}
 {%   if activated %}

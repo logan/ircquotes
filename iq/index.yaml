@@ -17,7 +17,11 @@ indexes:
   - name: network
   - name: protocol
 
-# Used 5 times in query history.
+# Used 9 times in query history.
+- kind: DialogLine
+  ancestor: yes
+
+# Used 2 times in query history.
 - kind: Quote
   properties:
   - name: submitted

@@ -12,24 +12,32 @@ from google.appengine.ext.webapp import template
 import accounts
 import hash
 import quotes
+import mailer
 
 class TemplateHandler(webapp.RequestHandler):
+  anonymous = True
+
   def __init__(self, *args, **kwargs):
     webapp.RequestHandler.__init__(self, *args, **kwargs)
     self.variables = {}
 
   def handleMethod(self, method):
+    if self.inTestingMode():
+      self.mailer = mailer.TestingModeMailer()
+      self['mailer'] = self.mailer
+      self['testing'] = True
+    else:
+      self.mailer = mailer.ProductionModeMailer()
     handler = getattr(self, 'handle%s' % method, None)
     if not callable(handler):
       self.response.set_status(405)
       return
     self.loadSession()
+    if not self.anonymous and not self.account.trusted:
+      self.response.set_status(403)
+      return
     handler()
     self['request'] = self.request
-    if self.request.host.startswith('iq-test'):
-      self['testing'] = True
-    elif self.request.environ['SERVER_SOFTWARE'].startswith('Dev'):
-      self['testing'] = True
     self.exportSession()
     self.render()
 
@@ -38,6 +46,11 @@ class TemplateHandler(webapp.RequestHandler):
 
   def post(self):
     self.handleMethod('Post')
+
+  def inTestingMode(self):
+    if self.request.environ['SERVER_SOFTWARE'].startswith('Dev'):
+      return True
+    return self.request.host.startswith('iq-test')
 
   def setCookie(self, name, value, path='/', expires=None):
     if expires is None:
@@ -52,6 +65,7 @@ class TemplateHandler(webapp.RequestHandler):
 
   def setAccount(self, account):
     self.session.account = account
+    self.account = account
     self['account'] = self.session.account
 
   def loadSession(self):
@@ -62,14 +76,14 @@ class TemplateHandler(webapp.RequestHandler):
       session_id = self.generateSessionId()
       self.setCookie('session', session_id)
     self.session = accounts.Session.load(session_id)
+    self.account = self.session.account
 
   def exportSession(self):
     self.session.put()
-    if self.session.account:
-      self.session.account.put()
+    if self.account.trusted:
+      self.account.put()
     self['session'] = self.session
-    if self.session.account:
-      self['account'] = self.session.account
+    self['account'] = self.account
 
   def __setitem__(self, name, value):
     self.variables[name] = value
@@ -163,7 +177,6 @@ class LoginPage(TemplateHandler):
     except accounts.InvalidPasswordException:
       self['error'] = 'password incorrect'
     except accounts.NotActivatedException:
-      #accounts.Account.setupActivation(name, self.session.url_on_login)
       self['error'] = 'account not activated'
       self['activate'] = True
       self['name'] = name
@@ -266,8 +279,42 @@ class CreateAccountPage(TemplateHandler):
       self['email_needed'] = True
     if ok:
       account = accounts.Account.create(name, email)
-      account.setupActivation(self.request.application_url, url)
-      self['account'] = account
+      account.setupActivation(self.mailer, self.request.application_url, url)
+      self.setAccount(account)
+
+
+class SubmitPage(TemplateHandler):
+  anonymous = False
+  path = 'submit.html'
+
+  def handleGet(self):
+    pass
+
+  def handlePost(self):
+    dialog = self.request.get('dialog').strip()
+    if not dialog:
+      return
+    draft = quotes.Quote.createDraft(self.account, dialog)
+    logging.info("Created draft: key=%s", draft.key())
+    self.redirect('/edit-draft?quote=%s' % draft.key())
+
+
+class EditDraftPage(TemplateHandler):
+  anonymous = False
+  path = 'edit-draft.html'
+
+  def handleGet(self):
+    key = self.request.get('quote')
+    self['key'] = key
+    logging.info('Fetching draft by key: %s', key)
+    draft = quotes.Quote.get(key)
+    if not draft:
+      logging.info('Draft does not exist!')
+      return
+    if draft.parent() == self.account:
+      self['draft'] = draft
+    else:
+      logging.info("Attempt to edit someone else's draft!")
 
 
 class DebugPage(webapp.RequestHandler):
@@ -339,12 +386,14 @@ def real_main():
   pages = [
     ('/', BrowseRecentPage),
     ('/activate', ActivationPage),
+    ('/browse-recent', BrowseRecentPage),
     ('/clear-data-store', ClearDataStorePage),
     ('/create-account', CreateAccountPage),
-    ('/browse-recent', BrowseRecentPage),
     ('/debug', DebugPage),
+    ('/edit-draft', EditDraftPage),
     ('/login', LoginPage),
     ('/logout', LogoutPage),
+    ('/submit', SubmitPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)

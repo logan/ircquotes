@@ -11,10 +11,9 @@
     address.  After you confirm your address, you will be able to set a
     password and log into the site.
   </p>
-App host: {{ request.application_url }}
 {% endblock %}
 {% block content %}
-{% if account %}
+{% if account.trusted %}
 {%   if testing %}
 <div id="activation_code">{{ account.activation }}</div>
 {%   endif %}
