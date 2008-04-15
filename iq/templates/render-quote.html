@@ -1,0 +1,17 @@
+<div class="quote">
+  <div class="quote_header roundtop">
+    <span class="quote_by">Quote by {{quote.parent.name|escape}}</span>
+    <span class="quote_context">...</span>
+    <span class="quote_date">Submitted: {{ quote.submitted }}</span>
+    <span class="quote_date">Last Modified: {{ quote.modified }}</span>
+  </div>
+  <div class="quote_source"><pre>{{ quote.dialog_source|escape }}</pre></div>
+  <div class="quote_footer roundbottom">
+{% if quote.note %}
+    <div class="quote_note">
+      <span class="label">Note:</span>{{ quote.note }}
+    </div>
+{% endif %}
+    Post comment
+  </div>
+</div>

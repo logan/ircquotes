@@ -4,6 +4,9 @@ from google.appengine.ext import db
 
 import accounts
 
+class NotInDraftMode(Exception): pass
+
+
 class Network(db.Model):
   name = db.StringProperty(required=True)
   canonical_name = db.StringProperty()
@@ -88,25 +91,41 @@ class Quote(db.Model):
   def getByLegacyId(legacy_id):
     return Quote.all().filter('legacy_id =', legacy_id).get()
 
-  def updateDialog(self):
-    def debug(lines):
-      for line in lines:
-        logging.info("line parent: %s", line.parent_key())
+  @staticmethod
+  def getPublishedQuote(key):
+    quote = Quote.get(key)
+    if quote and not quote.draft:
+      return quote
 
+  @staticmethod
+  def getRecentQuotes(start=None, offset=0, limit=10):
+    query = Quote.all().filter('draft =', False)
+    if start is not None:
+      query.filter('submitted <=', start)
+    query.order('-submitted')
+    return list(query.fetch(offset=offset, limit=limit))
+
+  def publish(self):
+    if not self.draft:
+      raise NotInDraftMode
+    self.draft = False
+    self.put()
+    return self
+
+  def update(self, dialog=None):
+    if not self.draft:
+      raise NotInDraftMode
+    if dialog is not None:
+      self.dialog_source = dialog
+      self.updateDialog()
+    self.put()
+
+  def updateDialog(self):
     new_lines = list(DialogLine.parse(self))
     old_lines = list(self.getDialog())
-
-    logging.info("old lines for %s", self.key())
-    debug(old_lines)
-    logging.info("new lines for %s", self.key())
-    debug(new_lines)
-
     if old_lines:
       db.delete(old_lines)
-    #db.put(new_lines)
-    for line in new_lines:
-      line.put()
-      logging.info("Saved line for %s", self.key())
+    db.put(new_lines)
     return new_lines
 
   def getDialog(self):

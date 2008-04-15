@@ -82,7 +82,7 @@ table.form td {
   margin-bottom: 2em;
 }
 
-.quote_header, .quote_note {
+.quote_header, .quote_footer {
   background: #afa;
   color: #343;
   font-weight: bold;

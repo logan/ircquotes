@@ -134,7 +134,8 @@ class BrowseRecentPage(BrowsePage):
   def getQuotes(self):
     start = None
     try:
-      start = int(self.request.get('start'))
+      start_ts = int(self.request.get('start'))
+      start = datetime.datetime.utcfromtimestamp(start_ts)
     except ValueError:
       pass
     offset = 0
@@ -142,12 +143,10 @@ class BrowseRecentPage(BrowsePage):
       offset = int(self.request.get('offset'))
     except ValueError:
       pass
-    query = quotes.Quote.all()
-    if start is not None:
-      logging.info('submitted <= %s', start)
-      query.filter('submitted <=', datetime.datetime.utcfromtimestamp(start))
-    query.order('-submitted')
-    qs = query.fetch(offset=offset, limit=self.page_size)
+    qs = quotes.Quote.getRecentQuotes(start=start,
+                                      offset=offset,
+                                      limit=self.page_size,
+                                     )
     if len(qs) == self.page_size:
       for i in xrange(2, self.page_size + 1):
         if qs[-i].submitted != qs[-1].submitted:
@@ -303,19 +302,44 @@ class EditDraftPage(TemplateHandler):
   anonymous = False
   path = 'edit-draft.html'
 
-  def handleGet(self):
+  def getDraft(self):
     key = self.request.get('quote')
     self['key'] = key
     logging.info('Fetching draft by key: %s', key)
     draft = quotes.Quote.get(key)
-    if not draft:
-      logging.info('Draft does not exist!')
-      return
-    if draft.parent_key() == self.account.key():
+    if draft and draft.draft and draft.parent_key() == self.account.key():
       self['draft'] = draft
-    else:
-      logging.info("Attempt to edit someone else's draft (user=%s, owner=%s)",
-                   self.account.key(), draft.parent_key())
+      return draft
+    return None
+
+  def handleGet(self):
+    self.getDraft()
+
+  def handlePost(self):
+    draft = self.getDraft()
+    if not draft:
+      return
+    dialog = self.request.get('dialog').strip()
+    if self.request.get('save'):
+      draft.update(dialog=dialog)
+    elif self.request.get('discard'):
+      draft.delete()
+      # TODO: What should the result of draft deletion be?
+      self.redirect('/')
+    elif self.request.get('publish'):
+      quote = draft.publish()
+      self.redirect('/quote?key=%s' % quote.key())
+
+
+class QuotePage(TemplateHandler):
+  path = 'quote.html'
+
+  def handleGet(self):
+    quote = quotes.Quote.getPublishedQuote(self.request.get('key'))
+    if quote is None:
+      self.response.set_status(404)
+      return
+    self['quote'] = quote
 
 
 class DebugPage(webapp.RequestHandler):
@@ -394,6 +418,7 @@ def real_main():
     ('/edit-draft', EditDraftPage),
     ('/login', LoginPage),
     ('/logout', LogoutPage),
+    ('/quote', QuotePage),
     ('/submit', SubmitPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)

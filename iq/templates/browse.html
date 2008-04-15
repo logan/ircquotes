@@ -4,40 +4,6 @@
 <a href="?start={{ next_start }}&offset={{ next_offset }}">Next {{ limit }}</a>
 {% endif %}
 {% for quote in quotes %}
-<div class="quote">
-  <div class="quote_header roundtop">
-    <span class="quote_by">
-      Quote by
-{% if quote.author %}
-      <a href="/account?name={{ quote.author.name|urlencode }}">
-        {{ quote.author.name }}
-      </a>
-{% else %}
-      Anonymous
-{% endif %}
-    </span>
-    <span class="quote_context">
-      IRC:
-{% if quote.context.network %}
-{%   if quote.context.network.name %}
-{{ quote.context.network.name }}
-{%   endif %}
-({{ quote.context.network.servers|first }}),
-{% endif %}
-    {{ quote.context.location }}
-    </span>
-    <span class="quote_date">Submitted: {{ quote.submitted }}</span>
-    <span class="quote_date">Last Modified: {{ quote.modified }}</span>
-  </div>
-  <div class="quote_source"><pre>{{ quote.source|escape }}</pre></div>
-  <div class="quote_footer">
-{% if quote.note %}
-    <div class="quote_note roundbottom">
-      <span class="label">Note:</span>{{ quote.note }}
-    </div>
-{% endif %}
-    Post comment
-  </div>
-</div>
+{%   include "render-quote.html" %}
 {% endfor %}
 {% endblock %}
