@@ -45,6 +45,9 @@ and set your password.
 {%     endif %}
         </span>
 {%   endif %}
+{%   if name_error %}
+        <span class="error">{{ name_error }}</span>
+{%   endif %}
 {%   if name_needed %}
         <span class="error">You must choose a name for this account.</span>
 {%   endif %}
@@ -72,8 +75,8 @@ and set your password.
 {%     endif %}
         </span>
 {%   endif %}
-{%   if email_invalid %}
-        <span class="error">This doesn't look like a valid email address.</span>
+{%   if email_error %}
+        <span class="error">{{ email_error }}</span>
 {%   endif %}
 {%   if email_needed %}
         <span class="error">You must provide a working email address in order to create an account.</span>

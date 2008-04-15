@@ -154,11 +154,11 @@ class LoginPage(TemplateHandler):
       account = accounts.Account.login(name, password)
       if account:
         self.setAccount(account)
-    except accounts.Account.NoSuchNameException:
+    except accounts.NoSuchNameException:
       self['error'] = 'invalid account name'
-    except accounts.Account.InvalidPasswordException:
+    except accounts.InvalidPasswordException:
       self['error'] = 'password incorrect'
-    except accounts.Account.NotActivatedException:
+    except accounts.NotActivatedException:
       #accounts.Account.setupActivation(name, self.session.url_on_login)
       self['error'] = 'account not activated'
       self['activate'] = True
@@ -238,6 +238,12 @@ class CreateAccountPage(TemplateHandler):
       if account:
         self['name_conflict'] = account
         ok = False
+      else:
+        try:
+          accounts.Account.validateName(name)
+        except accounts.InvalidName, e:
+          self['name_error'] = e.message
+          ok = False
     elif email:
       self['name_needed'] = True
     if email:
@@ -246,9 +252,12 @@ class CreateAccountPage(TemplateHandler):
       if account:
         self['email_conflict'] = account
         ok = False
-      elif not accounts.Account.validateEmail(email):
-        self['email_invalid'] = True
-        ok = False
+      else:
+        try:
+          accounts.Account.validateEmail(email)
+        except accounts.InvalidEmail, e:
+          self['email_error'] = e.message
+          ok = False
     elif name:
       self['email_needed'] = True
     if ok:

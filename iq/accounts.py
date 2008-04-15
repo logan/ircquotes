@@ -7,53 +7,22 @@ from google.appengine.ext import db
 
 import hash
 
-def __shouldBeNone(result):
-    return result is not None
-
-def __shouldNotBeNone(result):
-    return result is None
-
-__email_tests = [
-  (re.compile("^[0-9a-zA-Z\.\-\_]+\@[0-9a-zA-Z\.\-]+$"),
-    __shouldNotBeNone, "Failed a"),
-  (re.compile("^[^0-9a-zA-Z]|[^0-9a-zA-Z]$"), __shouldBeNone, "Failed b"),
-  (re.compile("([0-9a-zA-Z]{1})\@."), __shouldNotBeNone, "Failed c"),
-  (re.compile(".\@([0-9a-zA-Z]{1})"), __shouldNotBeNone, "Failed d"),
-  (re.compile(".\.\-.|.\-\..|.\.\..|.\-\-."), __shouldBeNone, "Failed e"),
-  (re.compile(".\.\_.|.\-\_.|.\_\..|.\_\-.|.\_\_."),
-    __shouldBeNone, "Failed f"),
-  (re.compile(".\.([a-zA-Z]{2,3})$|.\.([a-zA-Z]{2,4})$"),
-    __shouldNotBeNone, "Failed g"),
-]
-
-def validEmailAddress(address, debug=None):
-  """ Determines if an email address is malformed. """
-  for test in __email_tests:
-    if test[1](test[0].search(address)):
-      if debug:
-        return test[2]
-      return 0
-  return 1
+class InvalidName(Exception):
+  INVALID_CHARACTER = ('An account name may only contain letters, numerals,'
+                       ' apostrophes, spaces, and other characters acceptable'
+                       ' in IRC nicks.')
+  MISSING_LETTER = 'An account name must contain at least one letter.'
+  TOO_LONG = 'An account name may only be at most %d characters in length.'
 
 
-__username_tests = [
-  (re.compile("[^A-Za-z0-9'\\[\\]{}\\\\| -]"),
-    __shouldBeNone,
-    'A username may only contain letters, numerals, apostrophes, spaces, and'
-    ' other characters acceptable in IRC nicks.'),
-  (re.compile("^ "), __shouldBeNone, 'A username may not begin with a space.'),
-  (re.compile(" $"), __shouldBeNone, 'A username may not end with a space.'),
-  (re.compile("[A-Za-z]"),
-    __shouldNotBeNone, 'A username must contain at least one letter.'),
-  (re.compile(".{21}"),
-    __shouldBeNone, 'A username may only be at most 20 characters in length.'),
-]
+class InvalidEmail(Exception):
+  INVALID_FORMAT = "This doesn't look like a valid email address."
+  TOO_LONG = 'We only support email addresses up to %d characters long.'
 
-def validUsername(username, errors):
-  for test in __username_tests:
-    if test[1](test[0].search(username)):
-      errors.append(test[2])
-  return len(errors) == 0
+
+class NoSuchNameException(Exception): pass
+class InvalidPasswordException(Exception): pass
+class NotActivatedException(Exception): pass
 
 
 class Account(db.Model):
@@ -69,34 +38,43 @@ class Account(db.Model):
   active = db.DateTimeProperty(required=True, auto_now=True)
   legacy_id = db.IntegerProperty()
 
+  MAX_NAME_LENGTH = 20
+  NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
+  NAME_LETTER_PATTERN = re.compile(r'\w')
+
+  MAX_EMAIL_LENGTH = 32
+  EMAIL_PATTERN = re.compile(r'.+@.+\...+')
+
+  @staticmethod
+  def validateName(name):
+    name = name.strip()
+    if Account.NAME_INVALID_CHARACTER_PATTERN.search(name):
+      raise InvalidName(InvalidName.INVALID_CHARACTER)
+    if Account.NAME_LETTER_PATTERN.search(name) is None:
+      raise InvalidName(InvalidName.MISSING_LETTER)
+    if len(name) > Account.MAX_NAME_LENGTH:
+      raise InvalidName(InvalidName.TOO_LONG % Account.MAX_NAME_LENGTH)
+
   def put(self):
     self.normalized_name = self.normalizeName(self.name)
     self.normalized_email = self.normalizeEmail(self.email)
     return db.Model.put(self)
-
-  class NoSuchNameException(Exception): pass
-
-  class InvalidPasswordException(Exception): pass
-
-  class NotActivatedException(Exception): pass
 
   @staticmethod
   def normalizeName(name):
     return name.lower()
 
   @staticmethod
-  def validateName(name):
-    errors = []
-    validName(name, errors)
-    return errors
+  def validateEmail(email):
+    email = email.strip()
+    if Account.EMAIL_PATTERN.match(email) is None:
+      raise InvalidEmail(InvalidEmail.INVALID_FORMAT)
+    if len(email) > Account.MAX_EMAIL_LENGTH:
+      raise InvalidEmail(InvalidEmail.TOO_LONG % Account.MAX_EMAIL_LENGTH)
 
   @staticmethod
   def normalizeEmail(email):
     return email.lower()
-
-  @staticmethod
-  def validateEmail(email):
-    return validEmailAddress(email)
 
   @staticmethod
   def getByName(name):
@@ -118,15 +96,17 @@ class Account(db.Model):
   def login(name, password):
     account = Account.getByName(name)
     if not account:
-      raise Account.NoSuchNameException
+      raise NoSuchNameException
     if account.password is None:
-      raise Account.NotActivatedException
+      raise NotActivatedException
     if account.password != password:
-      raise Account.InvalidPasswordException
+      raise InvalidPasswordException
     return account
 
   @staticmethod
   def create(name, email):
+    name = name.strip()
+    email = email.strip()
     logging.info("Creating account: name=%r, email=%r", name, email)
     account = Account(name=name, email=email)
     account.put()
