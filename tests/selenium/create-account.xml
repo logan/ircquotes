@@ -17,6 +17,11 @@
 	<td>accountName</td>
 </tr>
 <tr>
+	<td>store</td>
+	<td>/?test</td>
+	<td>continueUrl</td>
+</tr>
+<tr>
 	<td>open</td>
 	<td>/testing/delete-account?name=${accountName}</td>
 	<td></td>
@@ -28,7 +33,7 @@
 </tr>
 <tr>
 	<td>open</td>
-	<td>/logout</td>
+	<td>/logout?url=${continueUrl}</td>
 	<td></td>
 </tr>
 <tr>
