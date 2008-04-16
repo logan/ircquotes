@@ -44,6 +44,21 @@
       </ul>
 {% if account.trusted %}
       <ul>
+        <li>
+          <a href="/browse-account?name={{account.name|urlencode}}">
+            My Quotes
+{% if account.quote_count %}
+            ({{account.quote_count}})
+{% endif %}
+          </a>
+        </li>
+        <li>
+          <a href="/browse-draft">
+            My Drafts
+{% if account.draft_count %}
+            ({{account.draft_count}})
+{% endif %}
+          </a>
         <li><a href="/submit">Submit a quote</a></li>
       </ul>
 {% endif %}

@@ -4,6 +4,12 @@
 {%   if draft %}
 <h1>Editing Draft</h1>
 {%     include "render-quote.html" %}
+{%   if dupes %}
+<hr>
+{%     for quote in dupes %}
+{%       include "render-quote.html" %}
+{%     endfor %}
+{%   endif %}
 <hr>
 <form method="POST" action="/edit-draft">
   <input type="hidden" name="quote" value="{{key}}">

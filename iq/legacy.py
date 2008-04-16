@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import pickle
+import sys
 import wsgiref.handlers
 
 from google.appengine.api import users
@@ -133,24 +134,18 @@ class AccountPage(MigratorPage):
     self.post()
 
   def post(self):
-    values = {}
-    def CheckForDuplicates(property, value):
-      if accounts.Account.all().filter('%s =' % property, value).get():
-        raise ValueError('%s %r already in use' % (property, value))
-      if value in values.setdefault(property, set()):
-        raise ValueError('%s %r already in use' % (property, value))
-      values[property].add(value)
-
     def MigrateAccount(i):
       legacy_id = int(self.request.get('legacy_id%d' % i))
       name = self.request.get('name%d' % i)
       email = self.request.get('email%d' % i)
+      password = self.request.get('password%d' % i)
       created_timestamp = int(self.request.get('created%d' % i))
       created = datetime.datetime.utcfromtimestamp(created_timestamp)
 
       account = accounts.Account(legacy_id=legacy_id,
                                  name=name,
                                  email=email,
+                                 password=password,
                                  created=created,
                                 )
       logging.info("Importing legacy_id=%d", legacy_id)
@@ -159,7 +154,7 @@ class AccountPage(MigratorPage):
     results = {}
 
     try:
-      for i in xrange(1000):
+      for i in xrange(sys.max_int):
         if not self.request.get('legacy_id%d' % i):
           break
         if self.request.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
@@ -167,9 +162,7 @@ class AccountPage(MigratorPage):
         legacy_id = int(self.request.get('legacy_id%d' % i))
         name = self.request.get('name%d' % i)
         email = self.request.get('email%d' % i)
-        CheckForDuplicates('legacy_id', legacy_id)
-        CheckForDuplicates('name', name)
-        CheckForDuplicates('email', email)
+        password = self.request.get('password%d' % i)
       last = i
       logging.info("last = %d", last)
 

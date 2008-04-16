@@ -26,6 +26,11 @@
       <span class="label">Note:</span>{{ quote.note }}
     </div>
 {% endif %}
-    Footer
+{% if quote.draft %}
+{%   ifequal quote.parent.key account.key %}
+    <a href="/edit-draft?quote={{quote.key|urlencode}}">Edit Draft</a>
+{%   endifequal %}
+{% endif %}
+    &nbsp;
   </div>
 </div>

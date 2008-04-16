@@ -51,6 +51,7 @@ class Account(db.Model):
   legacy_id = db.IntegerProperty()
   trusted = db.BooleanProperty(default=True)
   quote_count = db.IntegerProperty(default=0)
+  draft_count = db.IntegerProperty(default=0)
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
@@ -120,12 +121,13 @@ class Account(db.Model):
 
   @staticmethod
   def login(name, password):
+    hashpw = hash.generate(password)
     account = Account.getByName(name)
     if not account or not account.trusted:
       raise NoSuchNameException
     if account.password is None:
       raise NotActivatedException
-    if account.password != password:
+    if account.password != password and account.password != hashpw:
       raise InvalidPasswordException
     return account
 
@@ -155,6 +157,11 @@ class Account(db.Model):
                   'activation': self.activation,
                   'base_url': base_url,
                 })
+
+  def setPassword(self, password):
+    self.password = hash.generate(password)
+    self.activation = None
+    self.put()
 
 
 class Session(db.Expando):

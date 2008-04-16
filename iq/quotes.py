@@ -121,7 +121,7 @@ class DialogLine(db.Model):
   def getSignature(self):
     prefix = ''
     if self.actor:
-      match = self.NICK.match(self.actor)
+      match = self.NICK.search(self.actor)
       if match:
         prefix = match.group('nick')
 
@@ -160,7 +160,11 @@ class Quote(db.Model):
                  )
     quote.put()
     quote.updateDialog()
-    return quote
+    def transaction():
+      account.draft_count += 1
+      account.put()
+      return quote
+    return db.run_in_transaction(transaction)
 
   @staticmethod
   def getByLegacyId(legacy_id):
@@ -180,6 +184,27 @@ class Quote(db.Model):
     query.order('-submitted')
     return list(query.fetch(offset=offset, limit=limit))
 
+  @staticmethod
+  def getAccountQuotes(name, offset=0, limit=10, order='-submitted'):
+    account = accounts.Account.getByName(name)
+    if not account:
+      return []
+    query = (Quote.all()
+             .ancestor(account)
+             .filter('draft =', False)
+             .order(order)
+            )
+    return list(query.fetch(offset=offset, limit=limit))
+
+  @staticmethod
+  def getDraftQuotes(account, offset=0, limit=10, order='-submitted'):
+    query = (Quote.all()
+             .ancestor(account)
+             .filter('draft =', True)
+             .order(order)
+            )
+    return list(query.fetch(offset=offset, limit=limit))
+
   def publish(self):
     if not self.draft:
       raise NotInDraftMode
@@ -189,6 +214,7 @@ class Quote(db.Model):
       account = self.parent()
       logging.info("updating %s's quote count, %d -> %d", account.name, account.quote_count, account.quote_count + 1)
       account.quote_count += 1
+      account.draft_count -= 1
       account.put()
     db.run_in_transaction(transaction)
     return self
@@ -217,3 +243,19 @@ class Quote(db.Model):
     if sorted:
       query.order('offset')
     return query
+
+  def findDuplicates(self):
+    scores = {}
+    logging.info('Checking for dupes:')
+    for line in self.signature:
+      logging.info('  sig: %s', line)
+      query = Quote.all().filter('signature =', line)
+      for match in (l.key() for l in query):
+        if self.key() != match:
+          logging.info('    match: %s', match)
+          scores.setdefault(match, 0)
+          scores[match] += 1
+    logging.info('matches: %s', scores)
+    matches = scores.keys()
+    matches.sort(cmp=lambda a, b: cmp(scores[b], scores[a]))
+    return matches

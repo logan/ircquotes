@@ -66,16 +66,19 @@ def MigrateRatings(pusher):
 
 def MigrateAccounts(pusher):
   cursor = pusher.cursor()
-  cursor.execute("SELECT user_id, name, email, UNIX_TIMESTAMP(creation_time)"
+  cursor.execute("SELECT user_id, name, email, password"
+                 ", UNIX_TIMESTAMP(creation_time)"
                  " FROM users WHERE activation IS NULL")
   rows = cursor.fetchall()
   batch_size = 100
   for start in xrange(0, len(rows), batch_size):
     params = {}
-    for i, (legacy_id, name, email, created) in enumerate(rows[start:start+batch_size]):
+    for i, row in enumerate(rows[start:start+batch_size]):
+      legacy_id, name, email, password, created = row
       params['legacy_id%d' % i] = legacy_id
       params['name%d' % i] = name
       params['email%d' % i] = email
+      params['password%d' % i] = password
       params['created%d' % i] = created
     print "Uploading %d accounts..." % (i + 1)
     result = pusher.post('/account', **params)

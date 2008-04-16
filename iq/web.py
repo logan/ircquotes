@@ -128,6 +128,9 @@ class BrowsePage(TemplateHandler):
     self['mode'] = self.mode
     self['quotes'] = self.getQuotes()
 
+  def getQuotes(self):
+    raise NotImplementedError
+
 
 class BrowseRecentPage(BrowsePage):
   mode = 'recent'
@@ -154,6 +157,45 @@ class BrowseRecentPage(BrowsePage):
           break
       self['next_start'] = int(time.mktime(qs[-1].submitted.utctimetuple()))
       self['next_offset'] = i - 1
+    else:
+      self['end'] = True
+    return qs
+
+
+class BrowseAccountPage(BrowsePage):
+  mode = 'account'
+
+  def getQuotes(self):
+    account = accounts.Account.getByName(self.request.get('name'))
+    if not account:
+      return
+    self['browse_account'] = account
+    offset = 0
+    try:
+      offset = int(self.request.get('offset'))
+    except ValueError:
+      pass
+    qs = quotes.Quote.getAccountQuotes(self.request.get('name'), offset=offset)
+    if len(qs) == self.page_size:
+      self['next_offset'] = offset + self.page_size
+    else:
+      self['end'] = True
+    return qs
+
+
+class BrowseDraftPage(BrowsePage):
+  anonymous = False
+  mode = 'draft'
+
+  def getQuotes(self):
+    offset = 0
+    try:
+      offset = int(self.request.get('offset'))
+    except ValueError:
+      pass
+    qs = quotes.Quote.getDraftQuotes(self.account, offset=offset)
+    if len(qs) == self.page_size:
+      self['next_offset'] = offset + self.page_size
     else:
       self['end'] = True
     return qs
@@ -219,9 +261,7 @@ class ActivationPage(TemplateHandler):
       logging.info("checking password")
       if password and password == password_confirmation:
         logging.info("account activated!")
-        account.activation = None
-        account.password = password
-        account.put()
+        account.setPassword(password)
         self.setAccount(account)
         self['activated'] = True
         self['url'] = account.activation_url
@@ -314,8 +354,15 @@ class EditDraftPage(TemplateHandler):
       return draft
     return None
 
+  def findDuplicates(self, draft):
+      self['dupes'] = []
+      for key in draft.findDuplicates():
+        quote = quotes.Quote.get(key)
+        if quote:
+          self['dupes'].append(quote)
+
   def handleGet(self):
-    self.getDraft()
+    self.findDuplicates(self.getDraft())
 
   def handlePost(self):
     draft = self.getDraft()
@@ -330,9 +377,11 @@ class EditDraftPage(TemplateHandler):
       draft.delete()
       # TODO: What should the result of draft deletion be?
       self.redirect('/')
+      return
     elif self.request.get('publish'):
       quote = draft.publish()
       self.redirect('/quote?key=%s' % quote.key())
+    self.findDuplicates(draft)
 
 
 class QuotePage(TemplateHandler):
@@ -415,6 +464,8 @@ def real_main():
   pages = [
     ('/', BrowseRecentPage),
     ('/activate', ActivationPage),
+    ('/browse-account', BrowseAccountPage),
+    ('/browse-draft', BrowseDraftPage),
     ('/browse-recent', BrowseRecentPage),
     ('/clear-data-store', ClearDataStorePage),
     ('/create-account', CreateAccountPage),
