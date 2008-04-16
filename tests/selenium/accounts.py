@@ -9,10 +9,12 @@ class CreateAccount(selenium.TestCase):
                    createFormEmail='email',
                    createFormName='name',
                    createFormButton='Create Account',
+                   passwordFormButton='Set Password',
                   )
+    self.deleteCookie('session')
     self.open('/testing/delete-account?name=${name}')
     self.verifyTextPresent('ok')
-    self.open('/logout?url=${continueUrl}')
+    self.open('/?url=${continueUrl}')
     self.clickAndWait('link=${createAccountLink}')
 
   def testCreateForm(self):
@@ -85,3 +87,29 @@ class CreateAccount(selenium.TestCase):
     setName('${name}')
     submit()
     self.verifyElementPresent('activation_code')
+
+  def createAccount(self, name='${name}', email='${email}'):
+    self.type('${createFormName}', name)
+    self.type('${createFormEmail}', email)
+    self.clickAndWait("//input[@value='${createFormButton}']")
+    self.verifyElementPresent('activation_code')
+    self.storeText("//div[@id='activation_code']", 'activationCode')
+
+  def testPasswordForm(self):
+    self.constants(passwordMismatch='Passwords did not match',
+                   success=
+                     'Congratuations, ${name}, your account has been activated!'
+                     ' Continue.',
+                  )
+    self.createAccount()
+    self.open('/activate?name=${name}&activation=${activationCode}')
+    self.type('password', 'test1')
+    self.type('password', 'test2')
+    self.clickAndWait("//input[@value='${passwordFormButton}']")
+    self.verifyTextPresent('${passwordMismatch}')
+
+    self.type('password', 'test')
+    self.type('password2', 'test')
+    self.clickAndWait("//input[@value='${passwordFormButton}']")
+    self.verifyTextPresent('${success}')
+
