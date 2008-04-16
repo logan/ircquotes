@@ -10,18 +10,18 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
-# Unused in query history -- copied from input.
+# Used 105 times in query history.
 - kind: Context
   properties:
   - name: location
   - name: network
   - name: protocol
 
-# Unused in query history -- copied from input.
+# Used 100 times in query history.
 - kind: DialogLine
   ancestor: yes
 
-# Unused in query history -- copied from input.
+# Used 71 times in query history.
 - kind: DialogLine
   ancestor: yes
   properties:
@@ -34,20 +34,10 @@ indexes:
   - name: submitted
     direction: desc
 
-# Unused in query history -- copied from input.
-- kind: Quote
-  properties:
-  - name: submitted
-    direction: desc
-
-# Unused in query history -- copied from input.
+# Used 6 times in query history.
 - kind: Quote
   ancestor: yes
   properties:
   - name: draft
   - name: submitted
     direction: desc
-
-# Unused in query history -- copied from input.
-- kind: Rating
-  ancestor: yes

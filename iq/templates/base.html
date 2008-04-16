@@ -64,6 +64,13 @@
 {% endif %}
     </div>
 {% endblock %}
+    <div class="nav">
+      <h1>System Stats</h1>
+      <ul>
+        <li><em>Users:</em> {{system.account_count}}</li>
+        <li><em>Quotes:</em> {{system.quote_count}}</li>
+      </ul>
+    </div>
 {% if testing and mailer.account %}
     <div class="nav">
       <h1>Email Sent</h1>

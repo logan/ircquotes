@@ -11,8 +11,9 @@ from google.appengine.ext.webapp import template
 
 import accounts
 import hash
-import quotes
 import mailer
+import quotes
+import system
 
 class TemplateHandler(webapp.RequestHandler):
   anonymous = True
@@ -85,6 +86,7 @@ class TemplateHandler(webapp.RequestHandler):
     self.session.put()
     self['session'] = self.session
     self['account'] = self.account
+    self['system'] = system.getSystem()
 
   def __setitem__(self, name, value):
     self.variables[name] = value
@@ -427,7 +429,7 @@ class ClearDataStorePage(webapp.RequestHandler):
       counter = int(self.request.get('counter'))
     except ValueError:
       pass
-    modules = [accounts, quotes]
+    modules = [accounts, quotes, system]
     for module in modules:
       for value in module.__dict__.itervalues():
         if isinstance(value, type) and issubclass(value, db.Model):

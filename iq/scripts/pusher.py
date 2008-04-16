@@ -44,7 +44,7 @@ def MigrateRatings(pusher):
     logging.info('Clearing for %d', user_id)
     result = pusher.post('/rating', legacy_user_id=user_id, clear=1)
     if not result['ok']:
-      print 'Error!  %s' % result['error']
+      logging.error(result['error'])
       break
     if values:
       logging.info('Uploading %d ratings...', len(values))
@@ -58,7 +58,7 @@ def MigrateRatings(pusher):
                              submitted=submitted[j:j+batch_size],
                             )
         if not result['ok']:
-          print 'Error!  %s' % result['error']
+          logging.error(result['error'])
           break
     else:
       logging.info('No ratings to migrate')
@@ -68,55 +68,52 @@ def MigrateAccounts(pusher):
   cursor = pusher.cursor()
   cursor.execute("SELECT user_id, name, email, password"
                  ", UNIX_TIMESTAMP(creation_time)"
-                 " FROM users WHERE activation IS NULL")
+                 " FROM users WHERE activation IS NULL"
+                 " ORDER BY user_id")
   rows = cursor.fetchall()
-  batch_size = 100
-  for start in xrange(0, len(rows), batch_size):
+  for row in rows:
     params = {}
-    for i, row in enumerate(rows[start:start+batch_size]):
-      legacy_id, name, email, password, created = row
-      params['legacy_id%d' % i] = legacy_id
-      params['name%d' % i] = name
-      params['email%d' % i] = email
-      params['password%d' % i] = password
-      params['created%d' % i] = created
-    print "Uploading %d accounts..." % (i + 1)
+    legacy_id, name, email, password, created = row
+    params['legacy_id'] = legacy_id
+    params['name'] = name
+    params['email'] = email
+    params['password'] = password
+    params['created'] = created
+    logging.info("Pushing account %d..." % legacy_id)
     result = pusher.post('/account', **params)
     if not result['ok']:
-      print "Error!  %s" % result['error']
+      logging.error(result['error'])
       break
+    logging.debug(result)
 
 
 def MigrateQuotes(pusher):
-  print "Clearing all quotes!!!"
-  result = pusher.post('/quote', clear=1)
   cursor = pusher.cursor()
   cursor.execute("SELECT quote_id, user_id, UNIX_TIMESTAMP(submit_time), quote"
                  ", network, server, channel, note"
                  ", UNIX_TIMESTAMP(modify_time)"
-                 " FROM quotes")
+                 " FROM quotes ORDER BY user_id, quote_id")
   rows = cursor.fetchall()
-  batch_size = 1
-  for start in xrange(0, len(rows), batch_size):
+  for quote in rows:
+    (legacy_id, legacy_user_id, submitted, source, network, server, channel,
+     note, modified) = quote
     params = {}
-    for i, quote in enumerate(rows[start:start+batch_size]):
-      (legacy_id, legacy_user_id, submitted, source, network, server, channel,
-       note, modified) = quote
-      params['legacy_id%d' % i] = legacy_id
-      params['legacy_user_id%d' % i] = legacy_user_id
-      params['submitted%d' % i] = submitted
-      params['source%d' % i] = source
-      params['network%d' % i] = network
-      params['server%d' % i] = server
-      params['channel%d' % i] = channel
-      params['note%d' % i] = note
-      if modified:
-        params['modified%d' % i] = modified
-    print "Uploading %d quotes..." % (i + 1)
+    params['legacy_id'] = legacy_id
+    params['legacy_user_id'] = legacy_user_id
+    params['submitted'] = submitted
+    params['source'] = source
+    params['network'] = network
+    params['server'] = server
+    params['channel'] = channel
+    params['note'] = note
+    if modified:
+      params['modified'] = modified
+    logging.info("Uploading quote %d by %d...", legacy_id, legacy_user_id)
     result = pusher.post('/quote', **params)
     if not result['ok']:
-      print "Error!  %s" % result['error']
+      logging.error(result['error'])
       break
+    logging.debug(result)
 
 
 def main():
@@ -127,8 +124,12 @@ def main():
   parser.add_option('-d', '--dbname', dest='dbname', default='iq')
   parser.add_option('-a', '--appbase', dest='appbase',
                     default='http://localhost:8080/legacy')
+  parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
+                    help="Enable debug logging.")
 
   options, args = parser.parse_args()
+  if options.verbose:
+    logging.basicConfig(level=logging.DEBUG)
 
   conn = MySQLdb.connect(host=options.dbhost,
                          user=options.dbuser,
@@ -138,8 +139,8 @@ def main():
 
   pusher = Pusher(conn, options.appbase)
 
-  MigrateAccounts(pusher)
-  #MigrateQuotes(pusher)
+  #MigrateAccounts(pusher)
+  MigrateQuotes(pusher)
   #MigrateRatings(pusher)
 
 

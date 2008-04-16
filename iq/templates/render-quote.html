@@ -8,7 +8,13 @@
   <table class="quote_source" cellspacing="0">
 {% for line in quote.getDialog %}
     <tr class="{% cycle row0,row1 %}">
-      <td>{{line.time}}</td>
+      <td>
+{%   if line.time %}
+        {{line.time}}
+{%   else %}
+        &nbsp;
+{%   endif %}
+      </td>
       <td class="actor">
 {%   if line.actor %}
         &lt;{{line.actor|escape}}&gt;

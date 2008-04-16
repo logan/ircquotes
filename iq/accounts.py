@@ -7,6 +7,7 @@ from google.appengine.ext import db
 
 import hash
 import mailer
+import system
 
 ACTIVATION_EMAIL_TEMPLATE = '''Dear %(name)s,
 
@@ -132,12 +133,21 @@ class Account(db.Model):
     return account
 
   @staticmethod
-  def create(name, email):
+  def create(name, email, password=None, legacy_id=None, created=None):
     name = name.strip()
     email = email.strip()
     logging.info("Creating account: name=%r, email=%r", name, email)
-    account = Account(name=name, email=email)
+    kwargs = {}
+    if created is not None:
+      kwargs['created'] = created
+    account = Account(name=name,
+                      email=email,
+                      password=password,
+                      legacy_id=legacy_id,
+                      **kwargs)
     account.put()
+    if account.password:
+      system.incrementAccountCount()
     return account
 
   def setupActivation(self, mailer, base_url, destination_url):
@@ -159,6 +169,10 @@ class Account(db.Model):
                 })
 
   def setPassword(self, password):
+    logging.info('setting password')
+    if self.password is None:
+      logging.info('new account, incrementing counter')
+      system.incrementAccountCount()
     self.password = hash.generate(password)
     self.activation = None
     self.put()

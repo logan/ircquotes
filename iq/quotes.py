@@ -5,6 +5,7 @@ import re
 from google.appengine.ext import db
 
 import accounts
+import system
 
 class NotInDraftMode(Exception): pass
 
@@ -58,7 +59,7 @@ class DialogLine(db.Model):
   offset = db.IntegerProperty(required=True)
   time = db.TimeProperty()
   actor = db.StringProperty()
-  text = db.TextProperty(required=True)
+  text = db.TextProperty(default='')
 
   NL = re.compile(r'\r?\n')
   INDENT = re.compile(r'^(\s*)')
@@ -91,6 +92,8 @@ class DialogLine(db.Model):
 
   @staticmethod
   def parseLine(line):
+    if not line:
+      return (None, None, line)
     match = DialogLine.STATEMENT.match(line)
     if not match:
       return (None, None, line)
@@ -111,6 +114,9 @@ class DialogLine(db.Model):
   def parse(quote):
     for i, line in enumerate(DialogLine.generateLines(quote.dialog_source)):
       timestamp, actor, statement = DialogLine.parseLine(line)
+      if not statement:
+        logging.error('parseLine returned empty statement: %r', line)
+        logging.info(repr(quote.dialog_source))
       yield DialogLine(parent=quote,
                        offset=i,
                        time=timestamp,
@@ -143,7 +149,7 @@ class DialogLine(db.Model):
 class Quote(db.Model):
   draft = db.BooleanProperty(required=True, default=True)
   submitted = db.DateTimeProperty(required=True, auto_now_add=True)
-  modified = db.DateTimeProperty(required=True, auto_now=True)
+  modified = db.DateTimeProperty()
   context = db.ReferenceProperty(Context)
   dialog_source = db.TextProperty(required=True)
   note = db.TextProperty()
@@ -151,18 +157,29 @@ class Quote(db.Model):
   legacy_id = db.IntegerProperty()
 
   @staticmethod
-  def createDraft(account, source, context=None, note=None):
+  def createDraft(account, source,
+                  context=None,
+                  note=None,
+                  submitted=None,
+                  legacy_id=None,
+                 ):
+    kwargs = {}
+    if submitted:
+      kwargs['submitted'] = submitted
     quote = Quote(parent=account,
                   draft=True,
                   context=context,
                   dialog_source=source,
                   note=note,
+                  legacy_id=legacy_id,
+                  **kwargs
                  )
     quote.put()
     quote.updateDialog()
     def transaction():
-      account.draft_count += 1
-      account.put()
+      acc = accounts.Account.get(account.key())
+      acc.draft_count += 1
+      acc.put()
       return quote
     return db.run_in_transaction(transaction)
 
@@ -205,18 +222,20 @@ class Quote(db.Model):
             )
     return list(query.fetch(offset=offset, limit=limit))
 
-  def publish(self):
+  def publish(self, modified=None):
     if not self.draft:
       raise NotInDraftMode
     def transaction():
       self.draft = False
+      self.modified = modified or datetime.datetime.now()
       self.put()
-      account = self.parent()
+      account = accounts.Account.get(self.parent_key())
       logging.info("updating %s's quote count, %d -> %d", account.name, account.quote_count, account.quote_count + 1)
       account.quote_count += 1
       account.draft_count -= 1
       account.put()
     db.run_in_transaction(transaction)
+    system.incrementQuoteCount()
     return self
 
   def update(self, dialog=None):
