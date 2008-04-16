@@ -19,8 +19,8 @@ def loadModule(path, name):
                       os.path.join(name, path))
 
 
-def generateTestSuite(src_path, output_path):
-  suite = selenium.TestSuite()
+def generateTestSuite(src_path, output_path, appbase):
+  suite = selenium.TestSuite(baseUrl=appbase)
   logging.info('Building test suite from modules in %s', src_path)
   for root, dirs, files in os.walk(src_path):
     for name in files:
@@ -37,6 +37,9 @@ def generateTestSuite(src_path, output_path):
 
 def main():
   parser = OptionParser(usage='usage: %prog [options] TESTPATH')
+  parser.add_option('-a', '--appbase', dest='appbase',
+                    default='http://iq-test.appspot.com',
+                    help="URL of application to test.")
   parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help="Enable debug logging.")
   options, args = parser.parse_args()
@@ -46,7 +49,7 @@ def main():
   if len(args) < 2:
     parser.error("Path to selenium test cases and output directory must be"
                  " provided.")
-  generateTestSuite(args[0], args[1])
+  generateTestSuite(args[0], args[1], options.appbase)
 
 
 if __name__ == '__main__':

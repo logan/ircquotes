@@ -145,7 +145,8 @@ class TestCase(object):
 
 
 class TestSuite:
-  def __init__(self):
+  def __init__(self, baseUrl='http://iq-test.appspot.com'):
+    self.baseUrl = baseUrl
     self.cases = []
 
   def addModule(self, mod):
@@ -182,6 +183,7 @@ class TestSuite:
 
   def outputTestCase(self, path, klass, name, case):
     instance = klass()
+    instance.constants(baseUrl=self.baseUrl)
     instance.setUp()
     case(instance)
     qname = '%s.%s' % (klass.__name__, name)

@@ -10,16 +10,20 @@ class CreateAccount(selenium.TestCase):
                    createFormName='name',
                    createFormButton='Create Account',
                    passwordFormButton='Set Password',
+                   success=
+                     'Congratuations, ${name}, your account has been activated!'
+                     ' Continue.',
+                   hello='Hello, ${name}',
                   )
     self.deleteCookie('session')
     self.open('/testing/delete-account?name=${name}')
-    self.verifyTextPresent('ok')
-    self.open('/?url=${continueUrl}')
+    self.assertTextPresent('ok')
+    self.open('${continueUrl}')
     self.clickAndWait('link=${createAccountLink}')
 
   def testCreateForm(self):
     def assertError(text):
-      self.verifyTextPresent(text)
+      self.assertTextPresent(text)
 
     def submit():
       self.clickAndWait("//input[@value='${createFormButton}']")
@@ -73,12 +77,12 @@ class CreateAccount(selenium.TestCase):
 
     setName('a' * MAX_NAME_LEN)
     submit()
-    self.verifyTextNotPresent('${nameTooLong}')
+    self.assertTextNotPresent('${nameTooLong}')
 
     setName('a' * (MAX_NAME_LEN + 1))
     setEmail('%s@x.invalid' % ('a' * (MAX_EMAIL_LEN - 10)))
     submit()
-    self.verifyTextNotPresent('${emailTooLong}')
+    self.assertTextNotPresent('${emailTooLong}')
 
     setName('{}')
     submit()
@@ -86,30 +90,37 @@ class CreateAccount(selenium.TestCase):
 
     setName('${name}')
     submit()
-    self.verifyElementPresent('activation_code')
-
-  def createAccount(self, name='${name}', email='${email}'):
-    self.type('${createFormName}', name)
-    self.type('${createFormEmail}', email)
-    self.clickAndWait("//input[@value='${createFormButton}']")
-    self.verifyElementPresent('activation_code')
-    self.storeText("//div[@id='activation_code']", 'activationCode')
+    self.assertElementPresent('activation_code')
 
   def testPasswordForm(self):
     self.constants(passwordMismatch='Passwords did not match',
-                   success=
-                     'Congratuations, ${name}, your account has been activated!'
-                     ' Continue.',
                   )
     self.createAccount()
     self.open('/activate?name=${name}&activation=${activationCode}')
     self.type('password', 'test1')
     self.type('password', 'test2')
     self.clickAndWait("//input[@value='${passwordFormButton}']")
-    self.verifyTextPresent('${passwordMismatch}')
+    self.assertTextPresent('${passwordMismatch}')
+    self.setPassword(skip_open=True)
 
+  def testContinuation(self):
+    self.createAccount()
+    self.setPassword()
+    self.clickAndWait('link=Continue')
+    self.assertTextPresent('${hello}')
+    self.assertLocation('${baseUrl}${continueUrl}')
+
+  def createAccount(self, name='${name}', email='${email}'):
+    self.type('${createFormName}', name)
+    self.type('${createFormEmail}', email)
+    self.clickAndWait("//input[@value='${createFormButton}']")
+    self.assertElementPresent('activation_code')
+    self.storeText("//div[@id='activation_code']", 'activationCode')
+
+  def setPassword(self, skip_open=False):
+    if not skip_open:
+      self.open('/activate?name=${name}&activation=${activationCode}')
     self.type('password', 'test')
     self.type('password2', 'test')
     self.clickAndWait("//input[@value='${passwordFormButton}']")
-    self.verifyTextPresent('${success}')
-
+    self.assertTextPresent('${success}')
