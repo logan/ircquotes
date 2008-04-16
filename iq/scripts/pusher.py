@@ -4,12 +4,14 @@ import logging
 from optparse import OptionParser
 import MySQLdb
 import pickle
+import threading
 import urllib
 
 class Pusher:
-  def __init__(self, conn, appbase):
+  def __init__(self, conn, appbase, thread_count):
     self.conn = conn
     self.appbase = appbase
+    self.thread_count = thread_count
 
   def cursor(self):
     return self.conn.cursor()
@@ -23,8 +25,28 @@ class Pusher:
       else:
         ps.append((key, value))
     ps = urllib.urlencode(ps)
+    logging.debug('%s%s ? %s', self.appbase, uri, ps)
     f = urllib.urlopen('%s%s' % (self.appbase, uri), ps)
     return pickle.load(f)
+
+
+class Worker(threading.Thread):
+  def __init__(self, pusher, uri, work, id):
+    threading.Thread.__init__(self)
+    self.pusher = pusher
+    self.uri = uri
+    self.work = work
+    self.id = id
+
+  def run(self):
+    for i in xrange(self.id, len(self.work), self.pusher.thread_count):
+      logging.info('worker %d taking item %d', self.id, i)
+      result = self.pusher.post(self.uri, **self.work[i])
+      if not result['ok']:
+        logging.error(result['error'])
+        break
+      logging.debug('worker %d on item %d: %s', self.id, i, result)
+    logging.info('worker %d finished', self.id)
 
 
 def MigrateRatings(pusher):
@@ -70,6 +92,7 @@ def MigrateAccounts(pusher):
                  ", UNIX_TIMESTAMP(creation_time)"
                  " FROM users WHERE activation IS NULL"
                  " ORDER BY user_id")
+  work = []
   rows = cursor.fetchall()
   for row in rows:
     params = {}
@@ -79,12 +102,17 @@ def MigrateAccounts(pusher):
     params['email'] = email
     params['password'] = password
     params['created'] = created
-    logging.info("Pushing account %d..." % legacy_id)
-    result = pusher.post('/account', **params)
-    if not result['ok']:
-      logging.error(result['error'])
-      break
-    logging.debug(result)
+    work.append(params)
+
+  logging.info('Creating %d threads', pusher.thread_count)
+  threads = [Worker(pusher, '/account', work, i) for i in xrange(pusher.thread_count)]
+  logging.info('Starting %d threads', pusher.thread_count)
+  for thread in threads:
+    thread.start()
+  logging.info('Waiting on %d threads', pusher.thread_count)
+  for thread in threads:
+    thread.join()
+  logging.info('All threads completed!')
 
 
 def MigrateQuotes(pusher):
@@ -94,6 +122,7 @@ def MigrateQuotes(pusher):
                  ", UNIX_TIMESTAMP(modify_time)"
                  " FROM quotes ORDER BY user_id, quote_id")
   rows = cursor.fetchall()
+  work = []
   for quote in rows:
     (legacy_id, legacy_user_id, submitted, source, network, server, channel,
      note, modified) = quote
@@ -108,12 +137,17 @@ def MigrateQuotes(pusher):
     params['note'] = note
     if modified:
       params['modified'] = modified
-    logging.info("Uploading quote %d by %d...", legacy_id, legacy_user_id)
-    result = pusher.post('/quote', **params)
-    if not result['ok']:
-      logging.error(result['error'])
-      break
-    logging.debug(result)
+    work.append(params)
+
+  logging.info('Creating %d threads', pusher.thread_count)
+  threads = [Worker(pusher, '/quote', work, i) for i in xrange(pusher.thread_count)]
+  logging.info('Starting %d threads', pusher.thread_count)
+  for thread in threads:
+    thread.start()
+  logging.info('Waiting on %d threads', pusher.thread_count)
+  for thread in threads:
+    thread.join()
+  logging.info('All threads completed!')
 
 
 def main():
@@ -126,6 +160,8 @@ def main():
                     default='http://localhost:8080/legacy')
   parser.add_option('-v', '--verbose', action='store_true', dest='verbose',
                     help="Enable debug logging.")
+  parser.add_option('-t', '--threads', action='store', type='int',
+                    dest='threads', help='Degree of parallelization.')
 
   options, args = parser.parse_args()
   if options.verbose:
@@ -137,7 +173,7 @@ def main():
                          db=options.dbname,
                         )
 
-  pusher = Pusher(conn, options.appbase)
+  pusher = Pusher(conn, options.appbase, options.threads)
 
   #MigrateAccounts(pusher)
   MigrateQuotes(pusher)
