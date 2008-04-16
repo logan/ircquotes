@@ -17,17 +17,17 @@ indexes:
   - name: network
   - name: protocol
 
-# Used 17 times in query history.
+# Unused in query history -- copied from input.
 - kind: DialogLine
   ancestor: yes
 
-# Used 177 times in query history.
+# Unused in query history -- copied from input.
 - kind: DialogLine
   ancestor: yes
   properties:
   - name: offset
 
-# Used 13 times in query history.
+# Used 2 times in query history.
 - kind: Quote
   properties:
   - name: draft
@@ -40,7 +40,7 @@ indexes:
   - name: submitted
     direction: desc
 
-# Used 16 times in query history.
+# Unused in query history -- copied from input.
 - kind: Quote
   ancestor: yes
   properties:

@@ -154,7 +154,7 @@ class AccountPage(MigratorPage):
     results = {}
 
     try:
-      for i in xrange(sys.max_int):
+      for i in xrange(sys.maxint):
         if not self.request.get('legacy_id%d' % i):
           break
         if self.request.environ.get('SERVER_SOFTWARE', '').startswith('Development'):
