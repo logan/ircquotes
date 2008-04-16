@@ -3,23 +3,45 @@ from iq import selenium
 class CreateAccount(selenium.TestCase):
   def setUp(self):
     self.constants(name='testCreateAccount',
+                   uname='TESTCREATEACCOUNT',
                    email='testCreateAccount@domain.invalid',
+                   password='test',
+                   badname='testCreateAccount|bad',
+                   badnameError='invalid account name',
+                   badpassError='password incorrect',
                    continueUrl='/?test=1',
                    createAccountLink='Create a new account',
                    createFormEmail='email',
                    createFormName='name',
                    createFormButton='Create Account',
                    passwordFormButton='Set Password',
+                   signinFormButton='Login',
                    success=
                      'Congratuations, ${name}, your account has been activated!'
                      ' Continue.',
                    hello='Hello, ${name}',
+                   signin='Sign In',
                   )
     self.deleteCookie('session')
     self.open('/testing/delete-account?name=${name}')
     self.assertTextPresent('ok')
     self.open('${continueUrl}')
     self.clickAndWait('link=${createAccountLink}')
+
+  def createAccount(self, name='${name}', email='${email}'):
+    self.type('${createFormName}', name)
+    self.type('${createFormEmail}', email)
+    self.clickAndWait("//input[@value='${createFormButton}']")
+    self.assertElementPresent('activation_code')
+    self.storeText("//div[@id='activation_code']", 'activationCode')
+
+  def setPassword(self, skip_open=False):
+    if not skip_open:
+      self.open('/activate?name=${name}&activation=${activationCode}')
+    self.type('password', '${password}')
+    self.type('password2', '${password}')
+    self.clickAndWait("//input[@value='${passwordFormButton}']")
+    self.assertTextPresent('${success}')
 
   def testCreateForm(self):
     def assertError(text):
@@ -110,17 +132,20 @@ class CreateAccount(selenium.TestCase):
     self.assertTextPresent('${hello}')
     self.assertLocation('${baseUrl}${continueUrl}')
 
-  def createAccount(self, name='${name}', email='${email}'):
-    self.type('${createFormName}', name)
-    self.type('${createFormEmail}', email)
-    self.clickAndWait("//input[@value='${createFormButton}']")
-    self.assertElementPresent('activation_code')
-    self.storeText("//div[@id='activation_code']", 'activationCode')
-
-  def setPassword(self, skip_open=False):
-    if not skip_open:
-      self.open('/activate?name=${name}&activation=${activationCode}')
-    self.type('password', 'test')
-    self.type('password2', 'test')
-    self.clickAndWait("//input[@value='${passwordFormButton}']")
-    self.assertTextPresent('${success}')
+  def testSignin(self):
+    self.createAccount()
+    self.setPassword()
+    self.open('/logout?url=/')
+    self.open('/testing/delete-account?name=${badname}')
+    self.open('/login?url=${continueUrl}')
+    self.type('name', '${badname}')
+    self.clickAndWait("//input[@value='${signinFormButton}']")
+    self.assertTextPresent('${badnameError}')
+    self.type('name', '${uname}')
+    self.clickAndWait("//input[@value='${signinFormButton}']")
+    self.assertTextPresent('${badpassError}')
+    self.type('name', '${name}')
+    self.type('password', '${password}')
+    self.clickAndWait("//input[@value='${signinFormButton}']")
+    self.assertTextPresent('${hello}')
+    self.assertLocation('${baseUrl}${continueUrl}')

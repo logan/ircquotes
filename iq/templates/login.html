@@ -3,7 +3,7 @@
     <link rel="stylesheet" type="text/css" href="/iq.css">
     {% if account.trusted and session.url_on_login %}
     <script>
-window.top.location = "{{ session.url_on_login|urlencode }}";
+window.top.location = "{{ session.url_on_login|escape }}";
     </script>
     {% endif %}
     {% if activate %}
