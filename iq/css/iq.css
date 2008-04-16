@@ -96,10 +96,47 @@ table.form td {
 }
 
 .quote_source {
-  margin: 0;
-  padding: 0.5em;
   border-left: 0.5em solid #afa;
   border-right: 0.5em solid #afa;
+  font-family: monospace;
+  margin: 0;
+  padding: 0.5em;
+  width: 100%;
+}
+
+.quote_source .row0 {
+  background: white;
+}
+
+.quote_source .row1 {
+  background: #eee;
+}
+
+.quote_source tr:hover {
+  background: #ffd;
+  font-weight: bold;
+}
+
+.quote_source table {
+  border-collapse: collapse;
+}
+
+.quote_source td {
+  vertical-align: top;
+}
+
+.quote_source .actor {
+  border-right: 1px solid black;
+  padding-left: 1ex;
+  padding-right: 0.5ex;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.quote_source .text {
+  padding-left: 1ex;
+  width: 100%;
+  white-space: normal;
 }
 
 .quote_note span {

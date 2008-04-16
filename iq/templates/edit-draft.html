@@ -3,6 +3,8 @@
 {% block content %}
 {%   if draft %}
 <h1>Editing Draft</h1>
+{%     include "render-quote.html" %}
+<hr>
 <form method="POST" action="/edit-draft">
   <input type="hidden" name="quote" value="{{key}}">
   <table class="form">

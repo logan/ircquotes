@@ -78,11 +78,11 @@ class TemplateHandler(webapp.RequestHandler):
       self.setCookie('session', session_id)
     self.session = accounts.Session.load(session_id)
     self.account = self.session.account
+    if self.account.trusted:
+      self.account.put()
 
   def exportSession(self):
     self.session.put()
-    if self.account.trusted:
-      self.account.put()
     self['session'] = self.session
     self['account'] = self.account
 
@@ -310,6 +310,7 @@ class EditDraftPage(TemplateHandler):
     draft = quotes.Quote.get(key)
     if draft and draft.draft and draft.parent_key() == self.account.key():
       self['draft'] = draft
+      self['quote'] = draft
       return draft
     return None
 
@@ -320,6 +321,8 @@ class EditDraftPage(TemplateHandler):
     draft = self.getDraft()
     if not draft:
       return
+    self['draft'] = draft
+    self['quote'] = draft
     dialog = self.request.get('dialog').strip()
     if self.request.get('save'):
       draft.update(dialog=dialog)

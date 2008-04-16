@@ -50,6 +50,7 @@ class Account(db.Model):
   active = db.DateTimeProperty(required=True, auto_now=True)
   legacy_id = db.IntegerProperty()
   trusted = db.BooleanProperty(default=True)
+  quote_count = db.IntegerProperty(default=0)
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")

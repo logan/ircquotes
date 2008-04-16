@@ -5,13 +5,27 @@
     <span class="quote_date">Submitted: {{ quote.submitted }}</span>
     <span class="quote_date">Last Modified: {{ quote.modified }}</span>
   </div>
-  <div class="quote_source"><pre>{{ quote.dialog_source|escape }}</pre></div>
+  <table class="quote_source" cellspacing="0">
+{% for line in quote.getDialog %}
+    <tr class="{% cycle row0,row1 %}">
+      <td>{{line.time}}</td>
+      <td class="actor">
+{%   if line.actor %}
+        &lt;{{line.actor|escape}}&gt;
+{%   else %}
+        &nbsp;
+{%   endif %}
+      </td>
+      <td class="text">{{line.text|escape}}</td>
+    </tr>
+{% endfor %}
+  </table>
   <div class="quote_footer roundbottom">
 {% if quote.note %}
     <div class="quote_note">
       <span class="label">Note:</span>{{ quote.note }}
     </div>
 {% endif %}
-    Post comment
+    Footer
   </div>
 </div>

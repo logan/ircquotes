@@ -1,4 +1,6 @@
+import datetime
 import logging
+import re
 
 from google.appengine.ext import db
 
@@ -57,13 +59,85 @@ class DialogLine(db.Model):
   time = db.TimeProperty()
   actor = db.StringProperty()
   text = db.TextProperty(required=True)
-  signature = db.StringProperty()
+
+  NL = re.compile(r'\r?\n')
+  INDENT = re.compile(r'^(\s*)')
+  STATEMENT = re.compile(r'^(?P<timestamp>\d?\d:\d\d(:\d\d)?)?\s*'
+                         r"(<?(?P<actor>\W*[\w\d'\[\]{}\\|]+)\W*)?\s"
+                         r'(?P<statement>.*)'
+                        )
+  TIME = re.compile(r'(?P<hour>\d?\d):(?P<minute>\d\d)(:(?P<second>\d\d))?')
+  NICK = re.compile(r"(?P<nick>[\w\d'\[\]{}\\|]+)")
+  WORD_SPLITTER = re.compile(r'\s+')
+  WORD_STRIPPER = re.compile(r'\W+')
+
+  MAX_SIGNATURE_WORDS = 10
+  MAX_SIGNATURE_LEN = 40
+
+  @staticmethod
+  def generateLines(text):
+    line_start_indent = 0
+    cur_line = []
+    for line in DialogLine.NL.split(text):
+      indent = len(DialogLine.INDENT.match(line).group(1))
+      if indent <= line_start_indent:
+        if cur_line:
+          yield ' '.join(cur_line)
+        del cur_line[:]
+        line_start_indent = indent
+      cur_line.append(line.strip())
+    if cur_line:
+      yield ' '.join(cur_line)
+
+  @staticmethod
+  def parseLine(line):
+    match = DialogLine.STATEMENT.match(line)
+    if not match:
+      return (None, None, line)
+    data = match.groupdict()
+    time = None
+    if data['timestamp']:
+      match = DialogLine.TIME.match(data['timestamp'])
+      if match:
+        tdata = match.groupdict(0)
+        hour = int(tdata['hour'])
+        minute = int(tdata['minute'])
+        second = int(tdata['second'])
+        if hour < 24 and minute < 60 and second < 60:
+          time = datetime.time(hour, minute, second)
+    return (time, data['actor'] or None, data['statement'])
 
   @staticmethod
   def parse(quote):
-    # XXX: Naive parsing for now
-    for i, line in enumerate(quote.dialog_source.split('\n')):
-      yield DialogLine(parent=quote, offset=i, text=line)
+    for i, line in enumerate(DialogLine.generateLines(quote.dialog_source)):
+      timestamp, actor, statement = DialogLine.parseLine(line)
+      yield DialogLine(parent=quote,
+                       offset=i,
+                       time=timestamp,
+                       actor=actor,
+                       text=statement,
+                      )
+
+  def getSignature(self):
+    prefix = ''
+    if self.actor:
+      match = self.NICK.match(self.actor)
+      if match:
+        prefix = match.group('nick')
+
+    parts = []
+    total = 0
+    words = self.WORD_SPLITTER.split(self.text)[:self.MAX_SIGNATURE_WORDS]
+    for word in words:
+      word = self.WORD_STRIPPER.sub('', word)
+      total += len(word)
+      if total > self.MAX_SIGNATURE_LEN:
+        if not parts:
+          parts.append(word[:self.MAX_SIGNATURE_LEN])
+        break
+      parts.append(word)
+    if parts:
+      return '%s:%s' % (prefix, ' '.join(parts))
 
 
 class Quote(db.Model):
@@ -73,6 +147,7 @@ class Quote(db.Model):
   context = db.ReferenceProperty(Context)
   dialog_source = db.TextProperty(required=True)
   note = db.TextProperty()
+  signature = db.StringListProperty()
   legacy_id = db.IntegerProperty()
 
   @staticmethod
@@ -108,8 +183,14 @@ class Quote(db.Model):
   def publish(self):
     if not self.draft:
       raise NotInDraftMode
-    self.draft = False
-    self.put()
+    def transaction():
+      self.draft = False
+      self.put()
+      account = self.parent()
+      logging.info("updating %s's quote count, %d -> %d", account.name, account.quote_count, account.quote_count + 1)
+      account.quote_count += 1
+      account.put()
+    db.run_in_transaction(transaction)
     return self
 
   def update(self, dialog=None):
@@ -122,11 +203,17 @@ class Quote(db.Model):
 
   def updateDialog(self):
     new_lines = list(DialogLine.parse(self))
-    old_lines = list(self.getDialog())
+    old_lines = list(self.getDialog(sorted=False))
     if old_lines:
       db.delete(old_lines)
     db.put(new_lines)
+    signatures = [line.getSignature() for line in new_lines]
+    self.signature = [s for s in signatures if s]
+    self.put()
     return new_lines
 
-  def getDialog(self):
-    return DialogLine.all().ancestor(self)
+  def getDialog(self, sorted=True):
+    query = DialogLine.all().ancestor(self)
+    if sorted:
+      query.order('offset')
+    return query
