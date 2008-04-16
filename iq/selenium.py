@@ -132,7 +132,7 @@ class TestCase(object):
 
   def constants(self, **kwargs):
     for name, value in kwargs.iteritems():
-      self.emit('store', name, value)
+      self.emit('store', value, name)
 
   def emit(self, *args):
     args = list(args)[:3]
@@ -186,7 +186,7 @@ class TestSuite:
     case(instance)
     qname = '%s.%s' % (klass.__name__, name)
     f = self.startXhtml(path, '%s.xml' % qname, qname)
-    print >> f, 'table cellpadding="1" cellspacing="1" border="1">'
+    print >> f, '<table cellpadding="1" cellspacing="1" border="1">'
     print >> f, '<thead><tr><td colspan="3">%s</td></tr></thead>' % qname
     print >> f, '<tbody>'
     for row in instance.table:

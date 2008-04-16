@@ -13,7 +13,7 @@ class CreateAccount(selenium.TestCase):
     self.open('/testing/delete-account?name=${name}')
     self.verifyTextPresent('ok')
     self.open('/logout?url=${continueUrl}')
-    self.clickAndWait('clickAndWait', 'link=${createAccountLink}')
+    self.clickAndWait('link=${createAccountLink}')
 
   def testCreateForm(self):
     def assertError(text):

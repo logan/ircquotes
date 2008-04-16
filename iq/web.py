@@ -64,6 +64,7 @@ class TemplateHandler(webapp.RequestHandler):
     return 's%s' % hash.generate()
 
   def setAccount(self, account):
+    logging.info('Setting account to: %s', account.name)
     self.session.account = account
     self.account = account
     self['account'] = self.session.account
@@ -185,7 +186,7 @@ class LogoutPage(TemplateHandler):
   path = 'logout.html'
 
   def handleGet(self):
-    self.session.account = None
+    self.setAccount(accounts.Account.getAnonymous())
     self.redirect(self.request.get('url', '/'))
 
 

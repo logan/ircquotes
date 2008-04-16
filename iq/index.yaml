@@ -21,7 +21,7 @@ indexes:
 - kind: DialogLine
   ancestor: yes
 
-# Used 8 times in query history.
+# Used 13 times in query history.
 - kind: Quote
   properties:
   - name: draft
