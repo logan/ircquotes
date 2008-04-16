@@ -5,6 +5,7 @@ import re
 from google.appengine.ext import db
 
 import accounts
+import system
 
 class NotInDraftMode(Exception): pass
 
@@ -161,8 +162,9 @@ class Quote(db.Model):
     quote.put()
     quote.updateDialog()
     def transaction():
-      account.draft_count += 1
-      account.put()
+      acc = accounts.Account.get(account.key())
+      acc.draft_count += 1
+      acc.put()
       return quote
     return db.run_in_transaction(transaction)
 
@@ -211,12 +213,13 @@ class Quote(db.Model):
     def transaction():
       self.draft = False
       self.put()
-      account = self.parent()
+      account = accounts.Account.get(self.parent_key())
       logging.info("updating %s's quote count, %d -> %d", account.name, account.quote_count, account.quote_count + 1)
       account.quote_count += 1
       account.draft_count -= 1
       account.put()
     db.run_in_transaction(transaction)
+    system.incrementQuoteCount()
     return self
 
   def update(self, dialog=None):
