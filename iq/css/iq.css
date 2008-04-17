@@ -1,49 +1,139 @@
 body {
-  background: #bdf;
+  background: white;
   font-family: Verdana, Helvetica, Arial, sans-serif;
   font-size: 10pt;
   margin: 0;
+  padding: 0.5em;
 }
 
-#login_form {
-  background: #fff;
-}
-
-.nav {
-  background: #fff;
-  margin: 0.5em;
-  width: 20em;
-}
-
-.nav a {
-  color: #343;
+#header {
+  background: #7d3;
+  color: #474;
   font-weight: bold;
+}
+
+#header a {
+  color: #474;
+}
+
+#header a:hover {
+  color: #8b4;
+}
+
+#logo {
+  background: white;
+  border: none;
+  float: left;
+  margin: 0.5em;
+  width: 175px;
+}
+
+#logo img {
+  border: none;
+  margin-left: auto;
+}
+
+#search {
+  position: absolute;
+  top: 2em;
+  right: 1em;
+}
+
+.menu {
+  background: #cfc;
+  margin-left: -0.25em;
+  margin-top: 0.25em;
+  position: absolute;
+}
+
+.menu a {
+  display: block;
+  padding: 0.5ex;
+  text-align: left;
   text-decoration: none;
 }
 
-.nav h1 {
-  background: #afa;
-  color: #343;
-  font-weight: bold;
+.menu a:hover {
+  background: #ffc;
+}
+
+#user {
+  float: right;
+}
+
+#user_menu {
+  right: 0.5em;
+}
+
+#signin_form {
+  margin: 0.5em;
+  white-space: nowrap;
+}
+
+#signin_form td {
+  vertical-align: top;
+}
+
+#signin_form a {
+  display: inline;
+  font-size: xx-small;
+}
+
+#signin_form a:hover {
+  background: inherit;
+}
+
+#signin_button {
+  background: #474;
+  color: white;
   font-size: small;
-  margin: 0;
-  padding: 0;
-  padding-bottom: 0.5em;
+  height: 2em;
+  text-align: center;
+  width: 2em;
+}
+
+#signin_form .disabled {
+  background: #aaa;
+  color: white;
+}
+
+#signin_form input.disabled {
+  background: #eee;
+  color: #333;
+}
+
+#signin_form .error {
+  color: red;
+}
+
+#signin_button:hover {
+  color: #ffc;
+}
+
+#signin_error {
+  color: red;
+}
+
+#navbar {
+  margin-left: 180px;
+}
+
+.nav {
+  background: #cfc;
+  cursor: pointer;
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0.25em;
   text-align: center;
 }
 
-.nav ul {
-  margin: 0.2em;
-  padding-left: 2em;
+.nav:hover {
+  background: #ffc;
 }
 
-#content_container, #profile {
+#content_container {
   background: white;
-  left: 21em;
-  right: 0.5em;
   margin-top: 0.5em;
-  position: absolute;
-  top: 0;
 }
 
 #profile {
@@ -56,11 +146,6 @@ body {
 
 #content {
   padding: 0.5em;
-}
-
-.user iframe {
-  border: none;
-  width: 20em;
 }
 
 table.form td {

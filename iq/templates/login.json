@@ -1,0 +1,9 @@
+{
+  "ok":
+{% if account.trusted %}
+    true
+{% else %}
+    false,
+  "reason": "{{ error|escape }}"
+{% endif %}
+}

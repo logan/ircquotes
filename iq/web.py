@@ -204,14 +204,16 @@ class BrowseDraftPage(BrowsePage):
 
 
 class LoginPage(TemplateHandler):
-  path = 'login.html'
+  path = 'login.json'
 
   def handleGet(self):
     self.session.url_on_login = self.request.get('url')
+    self.handlePost()
 
   def handlePost(self):
     name = self.request.get('name')
     password = self.request.get('password')
+    logging.info("name=%r, password=%r", name, password)
     try:
       account = accounts.Account.login(name, password)
       if account:
