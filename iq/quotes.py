@@ -252,7 +252,7 @@ class Quote(db.Model):
       db.delete(old_lines)
     db.put(new_lines)
     signatures = [line.getSignature() for line in new_lines]
-    self.signature = [s for s in signatures if len(s) > ]
+    self.signature = [s for s in signatures if len(s) > 0]
     self.put()
     return new_lines
 
