@@ -361,6 +361,7 @@ class EditDraftPage(TemplateHandler):
   def findDuplicates(self, draft):
       self['dupes'] = []
       for key in draft.findDuplicates():
+        logging.info('dupe: %s', key)
         quote = quotes.Quote.get(key)
         if quote:
           self['dupes'].append(quote)

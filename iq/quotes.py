@@ -74,6 +74,7 @@ class DialogLine(db.Model):
 
   MAX_SIGNATURE_WORDS = 10
   MAX_SIGNATURE_LEN = 40
+  MIN_SIGNATURE_LEN = 10
 
   @staticmethod
   def generateLines(text):
@@ -125,25 +126,23 @@ class DialogLine(db.Model):
                       )
 
   def getSignature(self):
-    prefix = ''
+    parts = []
     if self.actor:
       match = self.NICK.search(self.actor)
       if match:
-        prefix = match.group('nick')
-
-    parts = []
-    total = 0
+        parts.append(match.group('nick'))
+    total = -1
     words = self.WORD_SPLITTER.split(self.text)[:self.MAX_SIGNATURE_WORDS]
     for word in words:
       word = self.WORD_STRIPPER.sub('', word)
-      total += len(word)
+      total += len(word) + 1
       if total > self.MAX_SIGNATURE_LEN:
         if not parts:
           parts.append(word[:self.MAX_SIGNATURE_LEN])
         break
       parts.append(word)
-    if parts:
-      return '%s:%s' % (prefix, ' '.join(parts))
+    if total >= self.MIN_SIGNATURE_LEN:
+      return ' '.join(parts)
 
 
 class Quote(db.Model):
@@ -253,7 +252,7 @@ class Quote(db.Model):
       db.delete(old_lines)
     db.put(new_lines)
     signatures = [line.getSignature() for line in new_lines]
-    self.signature = [s for s in signatures if s]
+    self.signature = [s for s in signatures if len(s) > ]
     self.put()
     return new_lines
 
