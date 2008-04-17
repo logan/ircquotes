@@ -1,18 +1,18 @@
+{% comment %}
+Provides an editor for quote drafts.
+
+Expected variables:
+
+- quote: Quote entity being edited
+
+{% endcomment %}
 {% extends "base.html" %}
 {% block subtitle %}Edit Draft{% endblock %}
 {% block content %}
-{%   if draft %}
 <h1>Editing Draft</h1>
-{%     include "render-quote.html" %}
-{%   if dupes %}
 <hr>
-{%     for quote in dupes %}
-{%       include "render-quote.html" %}
-{%     endfor %}
-{%   endif %}
-<hr>
-<form method="POST" action="/edit-draft">
-  <input type="hidden" name="quote" value="{{key}}">
+<form class="editor_form" method="POST" action="/edit-draft">
+  <input type="hidden" name="quote" value="{{ quote.key }}">
   <table class="form">
     <tr>
       <td class="label">Quote:</td>
@@ -29,7 +29,11 @@
     </tr>
   </table>
 </form>
-{%   else %}
-Draft {{key}} does not exist!
-{%   endif %}
+{%   include "render-quote.html" %}
+{%   if dupes %}
+<hr>
+{%   for quote in dupes %}
+{%     include "render-quote.html" %}
+{%   endfor %}
+{% endif %}
 {% endblock %}

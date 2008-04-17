@@ -359,12 +359,12 @@ class EditDraftPage(TemplateHandler):
     return None
 
   def findDuplicates(self, draft):
-      self['dupes'] = []
-      for key in draft.findDuplicates():
-        logging.info('dupe: %s', key)
-        quote = quotes.Quote.get(key)
-        if quote:
-          self['dupes'].append(quote)
+    self['dupes'] = []
+    for key in draft.findDuplicates():
+      logging.info('dupe: %s', key)
+      quote = quotes.Quote.get(key)
+      if quote:
+        self['dupes'].append(quote)
 
   def handleGet(self):
     self.findDuplicates(self.getDraft())

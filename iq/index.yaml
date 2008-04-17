@@ -21,13 +21,13 @@ indexes:
 - kind: DialogLine
   ancestor: yes
 
-# Used 14 times in query history.
+# Used 20 times in query history.
 - kind: DialogLine
   ancestor: yes
   properties:
   - name: offset
 
-# Used 414 times in query history.
+# Used 417 times in query history.
 - kind: Quote
   properties:
   - name: draft

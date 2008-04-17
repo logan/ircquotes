@@ -80,54 +80,6 @@
 {% endif %}
       </div>
     </div>
-<!--
-{% block nav %}
-    <div class="nav">
-      <h1>Quotes</h1>
-      <ul>
-        <li><a href="/browse-recent">Recent</a></li>
-      </ul>
-{% if account.trusted %}
-      <ul>
-        <li>
-          <a href="/browse-account?name={{account.name|urlencode}}">
-            My Quotes
-{% if account.quote_count %}
-            ({{account.quote_count}})
-{% endif %}
-          </a>
-        </li>
-        <li>
-          <a href="/browse-draft">
-            My Drafts
-{% if account.draft_count %}
-            ({{account.draft_count}})
-{% endif %}
-          </a>
-        <li><a href="/submit">Submit a quote</a></li>
-      </ul>
-{% endif %}
-    </div>
-{% endblock %}
-    <div class="nav">
-      <h1>System Stats</h1>
-      <ul>
-        <li><em>Users:</em> {{system.account_count}}</li>
-        <li><em>Quotes:</em> {{system.quote_count}}</li>
-      </ul>
-    </div>
-{% if testing and mailer.account %}
-    <div class="nav">
-      <h1>Email Sent</h1>
-      <pre>
-To: {{mailer.account.email|escape}}
-Subject: {{mailer.subject|escape}}
-
-{{mailer.body|escape}}
-      </pre>
-    </div>
-{% endif %}
--->
     <div id="content_container">
       <div id="content">
 {% block content %}

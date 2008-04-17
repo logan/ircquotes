@@ -155,6 +155,7 @@ table.form td {
 .label, .control {
   font-weight: bold;
   text-align: right;
+  white-space: nowrap;
 }
 
 .error {
@@ -229,3 +230,51 @@ table.form td {
   margin-right: 1ex;
 }
 
+#create_account {
+  background: #cfc;
+  margin-left: auto;
+  margin-right: auto;
+  min-width: 600px;
+  width: 60%;
+}
+
+#create_account td {
+  vertical-align: top;
+}
+
+#create_account_success {
+  display: none;
+}
+
+#create_account_left {
+  text-align: center;
+}
+
+#create_account_right {
+  text-align: left;
+}
+
+#create_account .step_by_step {
+  background: white;
+}
+
+.tip, .tip_cell {
+  font-size: xx-small;
+  font-weight: normal;
+  white-space: normal;
+}
+
+.tip_cell {
+  width: 20ex;
+}
+
+.step_by_step {
+  font-size: small;
+  font-weight: normal;
+  text-align: left;
+}
+
+.step_by_step .current_step {
+  font-size: medium;
+  font-weight: bold;
+}

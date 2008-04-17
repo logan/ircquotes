@@ -4,6 +4,8 @@ runtime: python
 api_version: 1
 
 handlers:
+- url: /json/.*
+  script: json.py
 - url: /legacy/.*
   script: legacy.py
 - url: /testing/.*

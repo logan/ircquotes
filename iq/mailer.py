@@ -11,6 +11,10 @@ class TestingModeMailer(AbstractMailer):
     self.subject = subject
     self.body = body
 
+  def getLastSentEmail(self):
+    return 'To: %s\nSubject: %s\n\n%s' % (
+        self.account, self.subject, self.body)
+
 
 class ProductionModeMailer(AbstractMailer):
   def send(self, account, subject, body):

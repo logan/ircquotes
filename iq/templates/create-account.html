@@ -1,101 +1,101 @@
+{% comment %}
+Provides the account creation form (and its success message).
+{% endcomment %}
 {% extends "base.html" %}
 {% block user %}
 {% endblock %}
-{% block nav %}
-<div class="nav">
-  <h1>Account Creation</h1>
-  <p>
-    All you need to create a free account is a valid email address.
-    Just enter the name you want to use on this site and your email address,
-    and we will reserve your account and send you an email to confirm your
-    address.  After you confirm your address, you will be able to set a
-    password and log into the site.
-  </p>
-{% endblock %}
 {% block content %}
-{% if account.trusted %}
-{%   if testing %}
-<div id="activation_code">{{ account.activation }}</div>
-{%   endif %}
-Thank you, {{ account.name|escape }}, your account has been created!
-An email has been sent to {{ account.email|escape }} to confirm your address.
-When you receive this email, follow the link provided to activate your account
-and set your password.
-{% else %}
-<form method="POST" action="/create-account">
-  <input type="hidden" name="url" value="{{ url|escape }}">
-  <table class="form">
-    <tr>
-      <td class="label">Account name:</td>
-      <td><input name="name" value="{{ name|escape }}"></td>
-      <td>
-{%   if name_conflict %}
-        <span class="error">
-          An account with this name already exists.
-{%     if name_conflict.password %}
-          If you've already created this account, but are having trouble
-          logging in, you can reset your password.
-          <a href="/reset-account?name={{ name|urlencode }}&url={{ url|urlencode }}">
-            Reset my password
-          </a>
-{%     else %}
-          If you've already requested this account, then you should have
-          received an email at the address you provided.
-          <a href="/activate?name={{ name_conflict.name|urlencode }}&send_email=1">
-            Resend this email.
-          </a>
-{%     endif %}
-        </span>
-{%   endif %}
-{%   if name_error %}
-        <span class="error">{{ name_error }}</span>
-{%   endif %}
-{%   if name_needed %}
-        <span class="error">You must choose a name for this account.</span>
-{%   endif %}
-      </td>
-    </tr>
-    <tr>
-      <td class="label">Email address:</td>
-      <td><input name="email" value="{{ email|escape }}"></td>
-      <td>
-{%   if email_conflict %}
-        <span class="error">
-          An account with this email address already exists.
-{%     if email_conflict.password %}
-          If you've already created this account, but are having trouble
-          logging in, you can reset your password.
-          <a href="/reset-account?name={{ email_conflict.name|urlencode }}&url={{ url|urlencode }}">
-            Reset my password
-          </a>
-{%     else %}
-          If you've already requested this account, then you should have
-          received an email at the address you provided.
-          <a href="/activate?name={{ email_conflict.name|urlencode }}&send_email=1">
-            Resend this email.
-          </a>
-{%     endif %}
-        </span>
-{%   endif %}
-{%   if email_error %}
-        <span class="error">{{ email_error }}</span>
-{%   endif %}
-{%   if email_needed %}
-        <span class="error">You must provide a working email address in order to create an account.</span>
-{%   endif %}
-      </td>
-    </tr>
-{%   if error %}
-    <tr>
-      <td colspan="2" class="error">{{ error }}</td>
-    </tr>
-{%   endif %}
-    <tr>
-      <td colspan="2" class="control">
-        <input type="submit" value="Create Account">
-      </td>
-    </tr>
-  </table>
-</form>
-{% endif %}
+<table id="create_account">
+  <tr>
+    <td id="create_account_left">
+      <div id="create_account_instructions">
+{% block instructions %}
+        Sign up here for a free account!  We just need a few details.
+{% endblock %}
+      </div>
+      <ol id="create_account_progress" class="step_by_step">
+{% block progress %}
+        <li class="current_step">Select a name and password
+        <li>Generate signup email
+        <li>Enter activation code to confirm email
+{% endblock %}
+      </ol>
+    </td>
+    <td id="create_account_right">
+{% block form %}
+      <div id="create_account_success">
+        Before we activate your account, we need to confirm your email address.
+        We've emailed an activation code to $email.  We've also included a URL
+        that you can just click to activate your account, or you can
+        <a id="create_account_activation_link">enter your activation code
+        here</a>.
+      </div>
+      <form id="create_account_form">
+        <table class="form">
+          <tr>
+            <td class="label">
+              Name:
+              <br>
+              <span class="tip">
+                This is the handle other users will see.
+              </span>
+            </td>
+            <td>
+              <input id="create_account_name" type="text" size="20"
+                     maxlength="20">
+            </td>
+            <td class="tip_cell">
+              <span id="create_account_name_msg">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">
+              Email:
+              <br>
+              <span class="tip">
+                We'll send an activation code to this address as part of the
+                signup process.
+              </span>
+            </td>
+            <td>
+              <input id="create_account_email" type="text" size="20"
+                      maxlength="32">
+            </td>
+            <td class="tip_cell">
+              <span id="create_account_email_msg">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">
+              Password:
+            </td>
+            <td>
+              <input id="create_account_password1" type="password" size="20">
+            </td>
+            <td rowspan="2" class="tip_cell">
+              <span id="create_account_password_msg">&nbsp;</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">
+              Confirm password:
+            </td>
+            <td>
+              <input id="create_account_password2" type="password" size="20">
+            </td>
+          </tr>
+          <tr>
+            <td colspan="2" class="control">
+              <input id="create_account_button" type="button" value="Sign Up">
+            </td>
+          </tr>
+        </table>
+      </form>
+{% endblock %}
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" id="create_account_msg">&nbsp;</td>
+  </tr>
+</table>
 {% endblock %}

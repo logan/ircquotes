@@ -146,14 +146,13 @@ class Account(db.Model):
                       legacy_id=legacy_id,
                       **kwargs)
     account.put()
-    if account.password:
+    if legacy_id:
       system.incrementAccountCount()
     return account
 
-  def setupActivation(self, mailer, base_url, destination_url):
+  def setupActivation(self, mailer, base_url):
     if not self.activation:
       self.activation = hash.generate()
-      self.activation_url = destination_url
       self.put()
       logging.info("Activating account: name=%r, email=%r, activation=%r",
                    self.name, self.email, self.activation)
