@@ -38,7 +38,7 @@ class InvalidPasswordException(Exception): pass
 class NotActivatedException(Exception): pass
 
 
-class Account(db.Model):
+class Account(db.Expando):
   name = db.StringProperty(required=True)
   normalized_name = db.StringProperty()
   email = db.EmailProperty(required=True)
@@ -53,6 +53,7 @@ class Account(db.Model):
   trusted = db.BooleanProperty(default=True)
   quote_count = db.IntegerProperty(default=0)
   draft_count = db.IntegerProperty(default=0)
+  facebook_id = db.IntegerProperty()
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
@@ -103,6 +104,10 @@ class Account(db.Model):
     return Account.all().filter('legacy_id =', legacy_id).get()
 
   @staticmethod
+  def getByFacebookId(legacy_id):
+    return Account.all().filter('facebook_id =', legacy_id).get()
+
+  @staticmethod
   def getByEmail(email):
     email = Account.normalizeEmail(email)
     logging.info("Looking up account by email: %r", email)
@@ -126,27 +131,31 @@ class Account(db.Model):
     account = Account.getByName(name)
     if not account or not account.trusted:
       raise NoSuchNameException
-    if account.password is None:
+    if account.activated is None and account.password is None:
       raise NotActivatedException
     if account.password != password and account.password != hashpw:
       raise InvalidPasswordException
     return account
 
   @staticmethod
-  def create(name, email, password=None, legacy_id=None, created=None):
+  def create(name, email, password=None, legacy_id=None, created=None,
+             facebook_id=None):
     name = name.strip()
     email = email.strip()
     logging.info("Creating account: name=%r, email=%r", name, email)
     kwargs = {}
     if created is not None:
       kwargs['created'] = created
+    if legacy_id or facebook_id:
+      kwargs['activated'] = datetime.datetime.now()
     account = Account(name=name,
                       email=email,
                       password=password,
                       legacy_id=legacy_id,
+                      facebook_id=facebook_id,
                       **kwargs)
     account.put()
-    if legacy_id:
+    if account.activated:
       system.incrementAccountCount()
     return account
 

@@ -1,9 +1,11 @@
-application: iq
+application: iq-test
 version: 2
 runtime: python
 api_version: 1
 
 handlers:
+- url: /facebook.*
+  script: facebook.py
 - url: /json/.*
   script: json.py
 - url: /legacy/.*

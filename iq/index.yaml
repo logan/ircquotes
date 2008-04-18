@@ -17,36 +17,36 @@ indexes:
   - name: network
   - name: protocol
 
-# Used 168 times in query history.
+# Used 22 times in query history.
 - kind: DialogLine
   ancestor: yes
 
-# Used 39 times in query history.
+# Used 74 times in query history.
 - kind: DialogLine
   ancestor: yes
   properties:
   - name: offset
 
-# Used 3 times in query history.
+# Unused in query history -- copied from input.
 - kind: Quote
   properties:
   - name: __searchable_text_index
   - name: draft
 
-# Used 579 times in query history.
+# Unused in query history -- copied from input.
 - kind: Quote
   properties:
   - name: draft
   - name: submitted
     direction: desc
 
-# Used 93 times in query history.
+# Used 12 times in query history.
 - kind: Quote
   properties:
   - name: submitted
     direction: desc
 
-# Used once in query history.
+# Used 4 times in query history.
 - kind: Quote
   ancestor: yes
   properties:

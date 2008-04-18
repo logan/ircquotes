@@ -115,12 +115,13 @@ def MigrateAccounts(pusher):
   logging.info('All threads completed!')
 
 
-def MigrateQuotes(pusher):
+def MigrateQuotes(pusher, first=0):
   cursor = pusher.cursor()
   cursor.execute("SELECT quote_id, user_id, UNIX_TIMESTAMP(submit_time), quote"
                  ", network, server, channel, note"
                  ", UNIX_TIMESTAMP(modify_time)"
-                 " FROM quotes ORDER BY user_id, quote_id")
+                 " FROM quotes WHERE quote_id > %s ORDER BY user_id, quote_id",
+                 first)
   rows = cursor.fetchall()
   work = []
   for quote in rows:
@@ -176,7 +177,7 @@ def main():
   pusher = Pusher(conn, options.appbase, options.threads)
 
   #MigrateAccounts(pusher)
-  MigrateQuotes(pusher)
+  MigrateQuotes(pusher, 1283)
   #MigrateRatings(pusher)
 
 

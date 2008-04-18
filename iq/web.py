@@ -15,60 +15,56 @@ import mailer
 import quotes
 import system
 
-class TemplateHandler(webapp.RequestHandler):
+class IqPage(webapp.RequestHandler):
+  def _getParam(self, name, args, kwargs, parser=str):
+    default_provided = True
+    if args:
+      default = args[0]
+    elif 'default' in kwargs:
+      default = kwargs['default']
+    else:
+      default_provided = False
+    value = self.request.get(name, None)
+    if value is None:
+      if default_provided:
+        return default
+      else:
+        raise KeyError
+    try:
+      return parser(value)
+    except ValueError, e:
+      if default_provided:
+        return default
+      else:
+        raise
+
+  def getParam(self, name, *args, **kwargs):
+    return self._getParam(name, args, kwargs)
+
+  def getIntParam(self, name, *args, **kwargs):
+    return self._getParam(name, args, kwargs, int)
+
+  def getLongParam(self, name, *args, **kwargs):
+    return self._getParam(name, args, kwargs, long)
+
+  @staticmethod
+  def _parseDateTimeParam(value):
+    items = map(int, value.split(','))
+    if len(items) < 3 or len(items) > 7:
+      raise ValueError('Expected list of 3-7 integers, got: %r' % value)
+    return datetime.datetime(*items)
+
+  def getDateTimeParam(self, name, *args, **kwargs):
+    return self._getParam(name, args, kwargs, self._parseDateTimeParam)
+
+
+
+class TemplatePage(IqPage):
   anonymous = True
 
   def __init__(self, *args, **kwargs):
     webapp.RequestHandler.__init__(self, *args, **kwargs)
     self.variables = {}
-
-  def getIntParam(self, name, *args, **kwargs):
-    default_provided = True
-    if args:
-      default = args[0]
-    elif 'default' in kwargs:
-      default = kwargs['default']
-    else:
-      default_provided = False
-    value = self.request.get(name, None)
-    if value is None:
-      if default_provided:
-        return default
-      else:
-        raise KeyError(name)
-    try:
-      return int(value)
-    except ValueError:
-      if default_provided:
-        return default
-      else:
-        raise
-
-  def getDateTimeParam(self, name, *args, **kwargs):
-    default_provided = True
-    if args:
-      default = args[0]
-    elif 'default' in kwargs:
-      default = kwargs['default']
-    else:
-      default_provided = False
-    value = self.request.get(name, None)
-    if value is None:
-      if default_provided:
-        return default
-      else:
-        raise KeyError(name)
-    try:
-      items = map(int, value.split(','))
-      if len(items) < 3 or len(items) > 7:
-        raise ValueError('Expected list of 3-7 integers, got: %r' % value)
-      return datetime.datetime(*items)
-    except ValueError:
-      logging.exception('valueerror on dt parsing')
-      if default_provided:
-        return default
-      else:
-        raise
 
   def handleMethod(self, method):
     if self.inTestingMode():
@@ -120,11 +116,13 @@ class TemplateHandler(webapp.RequestHandler):
 
   def loadSession(self):
     accounts.Session.expireAll()
-    if 'session' in self.request.cookies:
+    if self.request.get('session'):
+      session_id = self.request.get('session')
+    elif 'session' in self.request.cookies:
       session_id = self.request.cookies['session']
     else:
       session_id = self.generateSessionId()
-      self.setCookie('session', session_id)
+    self.setCookie('session', str(session_id))
     self.session = accounts.Session.load(session_id)
     self.account = self.session.account
     if self.account.trusted:
@@ -150,7 +148,7 @@ class TemplateHandler(webapp.RequestHandler):
     self.response.out.write(template.render(path, self.variables, debug=True))
     
 
-class IndexPage(TemplateHandler):
+class IndexPage(TemplatePage):
   path = 'index.html'
 
   def handleGet(self):
@@ -167,7 +165,7 @@ class IndexPage(TemplateHandler):
     self['limit'] = limit
 
 
-class BrowsePage(TemplateHandler):
+class BrowsePage(TemplatePage):
   PAGE_SIZE = 10
 
   path = 'browse.html'
@@ -263,7 +261,7 @@ class SearchPage(BrowsePage):
     return qs
 
 
-class LoginPage(TemplateHandler):
+class LoginPage(TemplatePage):
   path = 'login.json'
 
   def handleGet(self):
@@ -288,7 +286,7 @@ class LoginPage(TemplateHandler):
       self['name'] = name
 
 
-class LogoutPage(TemplateHandler):
+class LogoutPage(TemplatePage):
   path = 'logout.html'
 
   def handleGet(self):
@@ -296,7 +294,7 @@ class LogoutPage(TemplateHandler):
     self.redirect(self.request.get('url', '/'))
 
 
-class ActivationPage(TemplateHandler):
+class ActivationPage(TemplatePage):
   path = 'activate.html'
 
   def handleGet(self):
@@ -340,7 +338,7 @@ class ActivationPage(TemplateHandler):
       logging.info("password form lost activation code!")
 
 
-class CreateAccountPage(TemplateHandler):
+class CreateAccountPage(TemplatePage):
   path = 'create-account.html'
 
   def handleGet(self):
@@ -387,7 +385,7 @@ class CreateAccountPage(TemplateHandler):
       self.setAccount(account)
 
 
-class SubmitPage(TemplateHandler):
+class SubmitPage(TemplatePage):
   anonymous = False
   path = 'submit.html'
 
@@ -403,7 +401,7 @@ class SubmitPage(TemplateHandler):
     self.redirect('/edit-draft?quote=%s' % draft.key())
 
 
-class EditDraftPage(TemplateHandler):
+class EditDraftPage(TemplatePage):
   anonymous = False
   path = 'edit-draft.html'
 
@@ -445,11 +443,27 @@ class EditDraftPage(TemplateHandler):
       return
     elif self.request.get('publish'):
       quote = draft.publish()
+      # TODO: Use a nice signaling mechanism here
+      logging.info('Checking to see if we should post an action to Facebook')
+      import facebook
+      fb = facebook.FacebookSupport(self)
+      if fb.valid:
+        logging.info('publishing action')
+        fb('feed.publishTemplatizedAction',
+           title_template='{actor} added a'
+                          ' <a href="{app}/quote?key={quote}">quote</a> to'
+                          ' <a href="{app}">IrcQuotes</a>',
+           title_data={'app': self.request.application_url,
+                       'quote': str(quote.key()),
+                      },
+           format='XML',
+          )
+        logging.info('ready to redirect')
       self.redirect('/quote?key=%s' % quote.key())
     self.findDuplicates(draft)
 
 
-class QuotePage(TemplateHandler):
+class QuotePage(TemplatePage):
   path = 'quote.html'
 
   def handleGet(self):

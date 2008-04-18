@@ -30,10 +30,12 @@ Expected variables:
   </table>
 </form>
 {%   include "render-quote.html" %}
+{% comment %}
 {%   if dupes %}
 <hr>
 {%   for quote in dupes %}
 {%     include "render-quote.html" %}
 {%   endfor %}
 {% endif %}
+{% endcomment %}
 {% endblock %}

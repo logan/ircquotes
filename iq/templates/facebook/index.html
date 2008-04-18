@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block doc %}
+<fb:header>IrcQuotes</fb:header>
+
+{% if account.trusted %}
+<fb:tabs>
+  <fb:tab-item href="/ircquotes" title="Record a Quote" selected="true"/>
+  <fb:tab-item href="/ircquotes/settings" title="Settings"/>
+</fb:tabs>
+<fb:editor action="{{ request.application_url }}/submit">
+  <input type="hidden" name="session" value="{{ session.id }}"/>
+  <fb:editor-textarea label="Quote" name="dialog" rows="10"/>
+  <fb:editor-buttonset>
+    <fb:editor-button value="Add"/>
+  </fb:editor-buttonset>
+</fb:editor>
+{% else %}
+<fb:editor action="/ircquotes/link-account">
+  <center style="font-weight: bold">
+    Do you already have an IrcQuotes account?
+  </center>
+  <fb:editor-buttonset>
+    <fb:editor-button value="Yes"/>
+    <fb:editor-button name="new" value="No, I'll Just Use Facebook"/>
+  </fb:editor-buttonset>
+</fb:editor>
+{% endif %}
+{% endblock %}

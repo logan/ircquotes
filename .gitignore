@@ -1,3 +1,5 @@
 *.sw?
 *.py?
-s
+minifb.py
+iqconfig.py
+simplejson

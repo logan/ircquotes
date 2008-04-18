@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block doc %}
+{% if account.trusted %}
+<p>
+  Your Facebook account is linked to
+  <a href="{{ request.application_url }}/account?name={{ account.name|urlencode }}">
+    {{ account.name|escape }}
+  </a>.
+</p>
+{% else %}
+<fb:header>IrcQuotes: Link Existing Account</fb:header>
+<fb:editor action="/ircquotes/link-account">
+  <center style="font-weight:bold">
+    Sign into IQ using the form below.
+  </center>
+  <fb:editor-text label="IQ Account Name" name="name"/>
+  <fb:editor-custom label="Password">
+    <input type="password" name="password"/>
+  </fb:editor-custom>
+  <fb:editor-buttonset>
+    <fb:editor-button value="Link to Facebook"/>
+    <fb:editor-cancel value="Cancel" href="/ircquotes"/>
+  </fb:editor-buttonset>
+</fb:editor>
+{% endif %}
+{% endblock %}
