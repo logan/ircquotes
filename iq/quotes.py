@@ -1,8 +1,10 @@
 import datetime
 import logging
 import re
+import time
 
 from google.appengine.ext import db
+from google.appengine.ext import search
 
 import accounts
 import system
@@ -145,10 +147,11 @@ class DialogLine(db.Model):
       return ' '.join(parts)
 
 
-class Quote(db.Model):
+class Quote(search.SearchableModel):
   draft = db.BooleanProperty(required=True, default=True)
   submitted = db.DateTimeProperty(required=True, auto_now_add=True)
   modified = db.DateTimeProperty()
+  built = db.DateTimeProperty(default=datetime.datetime.fromtimestamp(0))
   context = db.ReferenceProperty(Context)
   dialog_source = db.TextProperty(required=True)
   note = db.TextProperty()
@@ -173,8 +176,7 @@ class Quote(db.Model):
                   legacy_id=legacy_id,
                   **kwargs
                  )
-    quote.put()
-    quote.updateDialog()
+    quote.rebuild()
     def transaction():
       acc = accounts.Account.get(account.key())
       acc.draft_count += 1
@@ -193,12 +195,42 @@ class Quote(db.Model):
       return quote
 
   @staticmethod
-  def getRecentQuotes(start=None, offset=0, limit=10):
-    query = Quote.all().filter('draft =', False)
+  def getRecentQuotes(**kwargs):
+    return Quote.getQuotesByTimestamp('submitted', descending=True, **kwargs)
+
+  @staticmethod
+  def getQuotesByBuildTime(**kwargs):
+    return Quote.getQuotesByTimestamp('built', **kwargs)
+
+  @staticmethod
+  def getQuotesByTimestamp(property, start=None, offset=0, limit=10,
+                           descending=False, include_drafts=True):
+    logging.info('quotes by ts: property=%s, start=%s, offset=%s limit=%s, descending=%s, drafts=%s',
+                 property, start, offset, limit, descending, include_drafts)
+    query = Quote.all()
+    if not include_drafts:
+      query.filter('draft =', False)
+    op = '>='
+    if descending:
+      op = '<='
     if start is not None:
-      query.filter('submitted <=', start)
-    query.order('-submitted')
-    return list(query.fetch(offset=offset, limit=limit))
+      logging.info('%s %s %s', property, op, start)
+      query.filter('%s %s' % (property, op), start)
+    if descending:
+      query.order('-%s' % property)
+    else:
+      query.order(property)
+    logging.info('offset=%d, limit=%d', offset, limit)
+    quotes = list(query.fetch(offset=offset, limit=limit))
+    logging.info('got back %d quotes', len(quotes))
+    logging.info('%s', [(i, str(quotes[i].submitted), quotes[i].submitted) for i in xrange(len(quotes))])
+    if len(quotes) == limit:
+      for i in xrange(2, limit + 1):
+        if quotes[-i].submitted != quotes[-1].submitted:
+          break
+      start = quotes[-1].submitted
+      offset = i - 1
+    return quotes, start, offset
 
   @staticmethod
   def getAccountQuotes(name, offset=0, limit=10, order='-submitted'):
@@ -219,6 +251,11 @@ class Quote(db.Model):
              .filter('draft =', True)
              .order(order)
             )
+    return list(query.fetch(offset=offset, limit=limit))
+
+  @staticmethod
+  def search(query, offset=0, limit=10):
+    query = Quote.all().search(query).filter('draft =', False)
     return list(query.fetch(offset=offset, limit=limit))
 
   def publish(self, modified=None):
@@ -242,8 +279,7 @@ class Quote(db.Model):
       raise NotInDraftMode
     if dialog is not None:
       self.dialog_source = dialog
-      self.updateDialog()
-    self.put()
+    self.rebuild()
 
   def updateDialog(self):
     new_lines = list(DialogLine.parse(self))
@@ -252,7 +288,7 @@ class Quote(db.Model):
       db.delete(old_lines)
     db.put(new_lines)
     signatures = [line.getSignature() for line in new_lines]
-    self.signature = [s for s in signatures if len(s) > 0]
+    self.signature = [s for s in signatures if s]
     self.put()
     return new_lines
 
@@ -277,3 +313,8 @@ class Quote(db.Model):
     matches = scores.keys()
     matches.sort(cmp=lambda a, b: cmp(scores[b], scores[a]))
     return matches
+
+  def rebuild(self):
+    self.built = datetime.datetime.now()
+    self.put()
+    self.updateDialog()

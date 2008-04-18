@@ -22,6 +22,54 @@ class TemplateHandler(webapp.RequestHandler):
     webapp.RequestHandler.__init__(self, *args, **kwargs)
     self.variables = {}
 
+  def getIntParam(self, name, *args, **kwargs):
+    default_provided = True
+    if args:
+      default = args[0]
+    elif 'default' in kwargs:
+      default = kwargs['default']
+    else:
+      default_provided = False
+    value = self.request.get(name, None)
+    if value is None:
+      if default_provided:
+        return default
+      else:
+        raise KeyError(name)
+    try:
+      return int(value)
+    except ValueError:
+      if default_provided:
+        return default
+      else:
+        raise
+
+  def getDateTimeParam(self, name, *args, **kwargs):
+    default_provided = True
+    if args:
+      default = args[0]
+    elif 'default' in kwargs:
+      default = kwargs['default']
+    else:
+      default_provided = False
+    value = self.request.get(name, None)
+    if value is None:
+      if default_provided:
+        return default
+      else:
+        raise KeyError(name)
+    try:
+      items = map(int, value.split(','))
+      if len(items) < 3 or len(items) > 7:
+        raise ValueError('Expected list of 3-7 integers, got: %r' % value)
+      return datetime.datetime(*items)
+    except ValueError:
+      logging.exception('valueerror on dt parsing')
+      if default_provided:
+        return default
+      else:
+        raise
+
   def handleMethod(self, method):
     if self.inTestingMode():
       self.mailer = mailer.TestingModeMailer()
@@ -138,29 +186,20 @@ class BrowseRecentPage(BrowsePage):
   mode = 'recent'
 
   def getQuotes(self):
-    start = None
-    try:
-      start_ts = int(self.request.get('start'))
-      start = datetime.datetime.utcfromtimestamp(start_ts)
-    except ValueError:
-      pass
+    start = self.getDateTimeParam('start', datetime.datetime.now())
     offset = 0
     try:
       offset = int(self.request.get('offset'))
     except ValueError:
       pass
-    qs = quotes.Quote.getRecentQuotes(start=start,
-                                      offset=offset,
-                                      limit=self.page_size,
-                                     )
-    if len(qs) == self.page_size:
-      for i in xrange(2, self.page_size + 1):
-        if qs[-i].submitted != qs[-1].submitted:
-          break
-      self['next_start'] = int(time.mktime(qs[-1].submitted.utctimetuple()))
-      self['next_offset'] = i - 1
-    else:
-      self['end'] = True
+    qs, start, offset = quotes.Quote.getRecentQuotes(start=start,
+                                                     offset=offset,
+                                                     limit=self.page_size,
+                                                    )
+    start = [start.year, start.month, start.day, start.hour, start.minute,
+             start.second, start.microsecond]
+    self['next_start'] = ','.join(map(str, start))
+    self['next_offset'] = offset
     return qs
 
 
@@ -177,7 +216,10 @@ class BrowseAccountPage(BrowsePage):
       offset = int(self.request.get('offset'))
     except ValueError:
       pass
-    qs = quotes.Quote.getAccountQuotes(self.request.get('name'), offset=offset)
+    qs = quotes.Quote.getAccountQuotes(self.request.get('name'),
+                                       offset=offset,
+                                       limit=self.page_size,
+                                      )
     if len(qs) == self.page_size:
       self['next_offset'] = offset + self.page_size
     else:
@@ -195,8 +237,26 @@ class BrowseDraftPage(BrowsePage):
       offset = int(self.request.get('offset'))
     except ValueError:
       pass
-    qs = quotes.Quote.getDraftQuotes(self.account, offset=offset)
+    qs = quotes.Quote.getDraftQuotes(self.account,
+                                     offset=offset,
+                                     limit=self.page_size,
+                                    )
     if len(qs) == self.page_size:
+      self['next_offset'] = offset + self.page_size
+    else:
+      self['end'] = True
+    return qs
+
+
+class SearchPage(BrowsePage):
+  mode = 'search'
+
+  def getQuotes(self):
+    offset = self.getIntParam('offset', 0)
+    q = self.request.get('q', self.request.get('next_start'))
+    qs = quotes.Quote.search(q, offset=offset, limit=self.page_size)
+    if len(qs) == self.page_size:
+      self['next_start'] = q
       self['next_offset'] = offset + self.page_size
     else:
       self['end'] = True
@@ -479,6 +539,7 @@ def real_main():
     ('/login', LoginPage),
     ('/logout', LogoutPage),
     ('/quote', QuotePage),
+    ('/search', SearchPage),
     ('/submit', SubmitPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
