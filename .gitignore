@@ -3,3 +3,5 @@
 minifb.py
 iqconfig.py
 simplejson
+iq/app.yaml
+iq/index.yaml

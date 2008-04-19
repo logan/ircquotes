@@ -5,6 +5,8 @@ class System(db.Expando):
 
   quote_count = db.IntegerProperty(default=0)
   account_count = db.IntegerProperty(default=0)
+  facebook_api_key = db.StringProperty()
+  facebook_secret = db.StringProperty()
 
 
 def getSystem():

@@ -10,7 +10,6 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
-import iqconfig
 import minifb
 
 import accounts
@@ -25,8 +24,13 @@ class FacebookSupport:
     minifb.urllib2.urlopen = urlopenWrapper
     self.handler = handler
     session = handler.session
-    self.fb_api_key = iqconfig.facebook_api_key
-    self.fb_secret = iqconfig.facebook_secret
+    sys = system.getSystem()
+    self.fb_api_key = sys.facebook_api_key
+    self.fb_secret = sys.facebook_secret
+    if not self.fb_api_key or not self.fb_secret:
+      self.valid = False
+      logging.info('facebook API key and secret not defined!')
+      return
     args = minifb.validate(self.fb_secret, self.handler.request.POST)
     self.fb_auth_token = args.get('auth_token')
     u = getattr(session, 'facebook_user', 0)
