@@ -6,6 +6,8 @@ import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+import browse
+import facebook
 import service
 
 def ui(path, **kwargs):
@@ -14,19 +16,21 @@ def ui(path, **kwargs):
   def decorator(f):
     f = service_dec(f)
     def wrapper(self):
+      def pre_hook():
+        self.facebook = facebook.FacebookSupport(self)
+        if self.account.trusted:
+          self.template.draft_page = browse.PageSpecifier(mode='draft')
       tmpl = service.Template()
-      f(self, tmpl)
-      logging.info('template path: %r', tpath)
-      logging.info('template data: %r', tmpl.__dict__)
+      f(self, template=tmpl, pre_hook=pre_hook)
       self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
     return wrapper
   return decorator
 
 
-class IndexPage(service.Service):
-  @ui('index.html')
+class IndexPage(browse.BrowseService):
+  @ui('browse.html')
   def get(self):
-    pass
+    self.browseQuotes(browse.PageSpecifier(mode='recent'))
 
 
 class QuotePage(service.QuoteService):
@@ -34,6 +38,12 @@ class QuotePage(service.QuoteService):
   def get(self):
     if not self.getQuote():
       self.response.set_status(404)
+
+
+class BrowsePage(browse.BrowseService):
+  @ui('browse.html')
+  def get(self):
+    self.browseQuotes()
 
 
 class SubmitPage(service.CreateDraftService):
@@ -83,6 +93,7 @@ def main():
   pages = [
     ('/', IndexPage),
     ('/activate', ActivationPage),
+    ('/browse', BrowsePage),
     ('/create-account', CreateAccountPage),
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),

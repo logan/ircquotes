@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import urllib
 
 from google.appengine.ext import webapp
 
@@ -16,13 +17,14 @@ class Template:
 
 def service(require_trusted=False, require_admin=False):
   def decorator(f):
-    def wrapper(self, template=None):
+    def wrapper(self, template=None, pre_hook=None):
       if template is None:
         template = Template()
       return self.handleRequest(f,
                                 require_trusted=require_trusted,
                                 require_admin=require_admin,
                                 template=template,
+                                pre_hook=pre_hook,
                                )
     return wrapper
   return decorator
@@ -74,7 +76,8 @@ class Service(webapp.RequestHandler):
   def getDateTimeParam(self, name, *args, **kwargs):
     return self._getParam(name, args, kwargs, self._parseDateTimeParam)
 
-  def handleRequest(self, impl, require_trusted, require_admin, template):
+  def handleRequest(self, impl, require_trusted, require_admin, template,
+                    pre_hook=None):
     self.template = template
     if self.inTestingMode():
       self.mailer = mailer.TestingModeMailer()
@@ -88,6 +91,8 @@ class Service(webapp.RequestHandler):
       self.response.set_status(403)
     if require_admin and not self.account.admin:
       self.response.set_status(403)
+    if pre_hook:
+      pre_hook()
     impl(self)
     self.session.put()
 
@@ -265,13 +270,16 @@ class EditDraftService(Service):
     draft = self.save()
     if draft:
       draft.update(publish=True)
+      self.redirect('/quote?key=%s' % urllib.quote(str(draft.key())))
 
 
 class QuoteService(Service):
   def getQuote(self):
     try:
-      self.template.vote = quotes.Quote.getQuoteByKey(self.request.get('key'),
-                                                      account=self.account)
-      return self.template.vote
+      quote = quotes.Quote.getQuoteByKey(key=self.request.get('key'),
+                                         account=self.account,
+                                        )
+      self.template.quote = quote
+      return quote
     except quotes.QuoteException, e:
       self.template.exception = e

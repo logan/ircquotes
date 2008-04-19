@@ -1,6 +1,6 @@
 <div class="quote">
   <div class="quote_header roundtop">
-    <span class="quote_by">Quote by {{quote.parent.name|escape}}</span>
+    <span class="quote_by">Quote by {{ quote.parent.name|escape }}</span>
     <span class="quote_context">...</span>
     <span class="quote_date">Submitted: {{ quote.submitted }}</span>
     <span class="quote_date">Last Modified: {{ quote.modified }}</span>
@@ -10,19 +10,19 @@
     <tr class="{% cycle row0,row1 %}">
       <td>
 {%   if line.time %}
-        {{line.time}}
+        {{ line.time }}
 {%   else %}
         &nbsp;
 {%   endif %}
       </td>
       <td class="actor">
 {%   if line.actor %}
-        &lt;{{line.actor|escape}}&gt;
+        &lt;{{ line.actor|escape }}&gt;
 {%   else %}
         &nbsp;
 {%   endif %}
       </td>
-      <td class="text">{{line.text|escape}}</td>
+      <td class="text">{{ line.text|escape }}</td>
     </tr>
 {% endfor %}
   </table>
@@ -34,7 +34,7 @@
 {% endif %}
 {% if quote.draft %}
 {%   ifequal quote.parent.key account.key %}
-    <a href="/edit-draft?quote={{quote.key|urlencode}}">Edit Draft</a>
+    <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit Draft</a>
 {%   endifequal %}
 {% endif %}
     &nbsp;

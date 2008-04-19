@@ -72,7 +72,7 @@
           <div id="browse_menu" style="display: none">
             <a href="/browse-recent">Recent</a>
 {% if account.trusted %}
-            <a href="/browse-draft">Drafts</a>
+            <a href="/browse?page={{ draft_page.encode|urlencode }}">Drafts</a>
 {% endif %}
           </div>
         </div>
@@ -88,6 +88,11 @@
 {% block content %}
 &nbsp;
 {% endblock %}
+      </div>
+      <div id="system_stats">
+        Published quotes: {{ system.quote_count }}
+        <br>
+        Activated accounts: {{ system.account_count }}
       </div>
     </div>
   </body>

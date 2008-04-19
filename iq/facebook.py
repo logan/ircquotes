@@ -20,16 +20,19 @@ import mailer
 import quotes
 import service
 import system
-import ui
 
 def facebook(path, **kwargs):
-  logging.info('calling ui.ui with facebook/%r', path)
-  ui_decorator = ui.ui(os.path.join('facebook', path), **kwargs)
+  tpath = os.path.join('templates', 'facebook', path)
+  service_dec = service.service(**kwargs)
   def decorator(f):
+    f = service_dec(f)
     def wrapper(self):
-      self.facebook = FacebookSupport(self)
-      return f(self)
-    return ui_decorator(wrapper)
+      def pre_hook():
+        self.facebook = FacebookSupport(self)
+      tmpl = service.Template()
+      f(self, template=tmpl, pre_hook=pre_hook)
+      self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
+    return wrapper
   return decorator
 
 

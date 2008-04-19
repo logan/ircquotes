@@ -1,9 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
-{% if not end %}
-<a href="?start={{ next_start }}&offset={{ next_offset }}">Next {{ limit }}</a>
-{% endif %}
-{% for quote in quotes %}
-{%   include "render-quote.html" %}
-{% endfor %}
+{%   include "browse-pager.html" %}
+{%   for quote in quotes %}
+{%     include "render-quote.html" %}
+{%   endfor %}
+{%   include "browse-pager.html" %}
 {% endblock %}

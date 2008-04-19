@@ -200,15 +200,19 @@ class Quote(search.SearchableModel):
 
   @staticmethod
   def getDraft(account, key):
-    logging.info('looking up draft: %s', key)
-    draft = Quote.get(key)
-    if not draft:
-      raise InvalidKeyException
+    draft = Quote.getQuoteByKey(account, key)
     if not draft.draft:
       raise InvalidQuoteStateException
-    if account.key() != draft.parent_key():
-      raise NoPermissionException
     return draft
+
+  @staticmethod
+  def getQuoteByKey(account, key):
+    quote = Quote.get(key)
+    if not quote:
+      raise InvalidKeyException
+    if quote.draft and account.key() != quote.parent_key():
+      raise NoPermissionException
+    return quote
 
   @staticmethod
   def getByLegacyId(legacy_id):
@@ -222,7 +226,10 @@ class Quote(search.SearchableModel):
 
   @staticmethod
   def getRecentQuotes(reversed=False, **kwargs):
-    return Quote.getQuotesByTimestamp('submitted', descending=not reversed, **kwargs)
+    return Quote.getQuotesByTimestamp('submitted',
+                                      descending=not reversed,
+                                      include_drafts=False,
+                                      **kwargs)
 
   @staticmethod
   def getQuotesByBuildTime(**kwargs):

@@ -1,0 +1,6 @@
+{%   if prev_page %}
+<a href="?page={{ prev_page.encode|urlencode }}">Previous {{ prev_page.size }}</a>
+{%   endif %}
+{%   if next_page %}
+<a href="?page={{ next_page.encode|urlencode }}">Next {{ next_page.size }}</a>
+{%   endif %}
