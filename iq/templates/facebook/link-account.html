@@ -1,14 +1,32 @@
 {% extends "base.html" %}
+{% block subtitle %}
+{%   if account.trusted %}
+Settings
+{%   else %}
+Link Account
+{%   endif %}
+{% endblock %}
+{% block header %}
+{{ block.super }}:
+{%   if account.trusted %}
+Settings
+{%   else %}
+Link Account
+{%   endif %}
+{% endblock %}
 {% block doc %}
-{% if account.trusted %}
-<p>
-  Your Facebook account is linked to
-  <a href="{{ request.application_url }}/account?name={{ account.name|urlencode }}">
-    {{ account.name|escape }}
-  </a>.
-</p>
-{% else %}
-<fb:header>IrcQuotes: Link Existing Account</fb:header>
+{%   if account.trusted %}
+<fb:tabs>
+  <fb:tab-item href="/ircquotes" title="Record a Quote"/>
+  <fb:tab-item href="/ircquotes/link-account" title="Settings" selected="true"/>
+</fb:tabs>
+<fb:editor action="/ircquotes/link-account">
+  <fb:editor-custom label="Linked account">
+    <a href="/ircquotes/view-account?name={{ account.name|urlencode }}">{{ account.name|escape }}</a>
+    [<a href="/ircquotes/link-account?clear=1">Unlink</a>]
+  </fb:editor-custom>
+</fb:editor>
+{%   else %}
 <fb:editor action="/ircquotes/link-account">
   <center style="font-weight:bold">
     Sign into IQ using the form below.
@@ -22,5 +40,5 @@
     <fb:editor-cancel value="Cancel" href="/ircquotes"/>
   </fb:editor-buttonset>
 </fb:editor>
-{% endif %}
+{%   endif %}
 {% endblock %}

@@ -20,7 +20,11 @@ Thank you for registering!
 IrcQuotes Administration'''
 
 
-class InvalidName(Exception):
+class AccountException(Exception):
+  pass
+
+
+class InvalidName(AccountException):
   INVALID_CHARACTER = ('An account name may only contain letters, numerals,'
                        ' apostrophes, spaces, and other characters acceptable'
                        ' in IRC nicks.')
@@ -28,14 +32,23 @@ class InvalidName(Exception):
   TOO_LONG = 'An account name may only be at most %d characters in length.'
 
 
-class InvalidEmail(Exception):
+class InvalidEmail(AccountException):
   INVALID_FORMAT = "This doesn't look like a valid email address."
   TOO_LONG = 'We only support email addresses up to %d characters long.'
 
 
-class NoSuchNameException(Exception): pass
-class InvalidPasswordException(Exception): pass
-class NotActivatedException(Exception): pass
+class NoSuchNameException(AccountException): pass
+class InvalidPasswordException(AccountException): pass
+class NotActivatedException(AccountException): pass
+class InvalidAccountStateException(AccountException): pass
+class InvalidActivationException(AccountException): pass
+
+
+VERB_SIGNED_UP = system.Verb('signed up')
+
+@system.capture(VERB_SIGNED_UP)
+def onAccountActivated(action):
+  system.incrementAccountCount()
 
 
 class Account(db.Expando):
@@ -54,6 +67,7 @@ class Account(db.Expando):
   quote_count = db.IntegerProperty(default=0)
   draft_count = db.IntegerProperty(default=0)
   facebook_id = db.IntegerProperty()
+  admin = db.BooleanProperty(default=False)
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
@@ -126,6 +140,23 @@ class Account(db.Expando):
     return account
 
   @staticmethod
+  def activate(name, activation):
+    logging.info('Attempting to activate %r', name)
+    account = Account.getByName(name)
+    if not account:
+      raise NoSuchNameException
+    if not account.activation:
+      raise InvalidAccountStateException
+    if account.activation != activation:
+      raise InvalidActivationException
+    account.activated = datetime.datetime.now()
+    account.activation = None
+    account.trusted = True
+    account.put()
+    system.record(account, VERB_SIGNED_UP)
+    return account
+
+  @staticmethod
   def login(name, password):
     hashpw = hash.generate(password)
     account = Account.getByName(name)
@@ -184,6 +215,31 @@ class Account(db.Expando):
     self.password = hash.generate(password)
     self.activation = None
     self.put()
+
+  def isAdmin(self):
+    if self.admin:
+      return True
+    if not self.trusted:
+      return False
+    logging.info('Checking if system owner has been set...')
+    sys = system.getSystem()
+    if sys.owner:
+      return False
+    logging.info('Making %s owner and admin', self.name)
+    sys.owner = self.name
+    sys.put()
+    self.admin = True
+    self.put()
+    return True
+
+  def __repr__(self):
+    tags = []
+    if not self.trusted:
+      tags.append('untrusted')
+    if self.admin:
+      tags.append('admin')
+    return '<Account: %r%s>' % (self.name,
+                                tags and (' %s' % ', '.join(tags)) or '')
 
 
 class Session(db.Expando):

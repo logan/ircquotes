@@ -1,4 +1,44 @@
+import logging
+
+from pydispatch import dispatcher
+
 from google.appengine.ext import db
+
+REGISTERED_VERBS = set()
+
+def Verb(verb):
+  assert verb not in REGISTERED_VERBS
+  REGISTERED_VERBS.add(verb)
+  return verb
+
+
+class Action(db.Expando):
+  timestamp = db.DateTimeProperty(required=True, auto_now_add=True)
+  verb = db.StringProperty(required=True)
+  actor = db.ReferenceProperty()
+  targets = db.ListProperty(db.Key)
+
+
+def record(actor, verb, *targets, **kwargs):
+  if not targets:
+    targets = kwargs.get('targets')
+  if targets:
+    kwargs = kwargs.copy()
+    kwargs['targets'] = [target.key() for target in targets]
+  action = Action(actor=actor,
+                  verb=verb,
+                  **kwargs)
+  action.put()
+  dispatcher.send(signal=verb, sender=record, action=action)
+  return action
+
+
+def capture(verb):
+  def decorator(f):
+    dispatcher.connect(receiver=f, signal=verb, sender=record)
+    return f
+  return decorator
+
 
 class System(db.Expando):
   SYSTEM_KEY_NAME = 'system'
@@ -7,6 +47,7 @@ class System(db.Expando):
   account_count = db.IntegerProperty(default=0)
   facebook_api_key = db.StringProperty()
   facebook_secret = db.StringProperty()
+  owner = db.StringProperty()
 
 
 def getSystem():

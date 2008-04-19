@@ -69,11 +69,11 @@ function toggleSignInFormEnabled() {
 };
 
 function handleSignInResponse(response) {
-  if (response.ok) {
+  if (response.success) {
     slideUp($("user_menu"), {"duration": 0.5});
     window.location.reload();
   } else {
-    displaySignInError(response.reason);
+    displaySignInError(response.exception);
   }
 }
 
@@ -99,7 +99,7 @@ function maybeSignIn() {
     toggleSignInFormEnabled();
     $("signin_status").innerHTML = "Logging in ...";
 
-    var d_result = loadJSONDoc("/login",
+    var d_result = loadJSONDoc("/json/login",
                                {"name": account.value,
                                 "password": password.value});
 
@@ -182,12 +182,14 @@ function checkSignUpField(field) {
 
   params[field] = $(n).value;
 
-  var d_result = loadJSONDoc("/json/check-" + field, params);
+  var d_result = loadJSONDoc("/json/create-account", params);
 
   $(n).checking = d_result;
   d_result.addCallback(function(response) {
-                         if (response.error) {
-                           markSignUpFormError(field, response.reason);
+                         var error = response[field + "_error"];
+
+                         if (error) {
+                           markSignUpFormError(field, error);
                          } else {
                            clearSignUpFormError(field, null);
                          }
@@ -271,6 +273,7 @@ function checkSignUpForm() {
 
 function submitSignUpForm() {
   var params = {
+    "create": "1",
     "name": $("create_account_name").value,
     "email": $("create_account_email").value,
     "password": $("create_account_password1").value
@@ -282,17 +285,18 @@ function submitSignUpForm() {
                              handleSignUpError("Server side error");
                              return;
                            }
-                           if (response.ok) {
+                           if (response.created) {
                              handleSignUpSuccess(response.name, response.email,
                                                  response.activation,
                                                  response.confirmation);
                            } else {
-                             if (response.errors) {
-                               markSignUpFormError("name", response.errors.name);
-                               markSignUpFormError("email", response.errors.email);
-                               markSignUpFormError("password", response.errors.password);
+                             if (response.name_error) {
+                               markSignUpFormError("name", response.name_error);
                              }
-                             markSignUpFormError("*", response.reason);
+                             if (response.password_error) {
+                               markSignUpFormError("password", response.password_error);
+                             }
+                             markSignUpFormError("*", response.exception);
                            }
                          });
   d_response.addErrback(handleSignUpError);

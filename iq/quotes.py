@@ -9,7 +9,20 @@ from google.appengine.ext import search
 import accounts
 import system
 
-class NotInDraftMode(Exception): pass
+class QuoteException(Exception):
+  pass
+
+class InvalidQuoteStateException(QuoteException): pass
+class InvalidKeyException(QuoteException): pass
+class NoPermissionException(QuoteException): pass
+
+
+VERB_PUBLISHED = system.Verb('published')
+VERB_UPDATED = system.Verb('updated')
+
+@system.capture(VERB_PUBLISHED)
+def onQuotePublished(action):
+  system.incrementQuoteCount()
 
 
 class Network(db.Model):
@@ -165,6 +178,7 @@ class Quote(search.SearchableModel):
                   submitted=None,
                   legacy_id=None,
                  ):
+    logging.info('creating draft by %r', account)
     kwargs = {}
     if submitted:
       kwargs['submitted'] = submitted
@@ -185,6 +199,18 @@ class Quote(search.SearchableModel):
     return db.run_in_transaction(transaction)
 
   @staticmethod
+  def getDraft(account, key):
+    logging.info('looking up draft: %s', key)
+    draft = Quote.get(key)
+    if not draft:
+      raise InvalidKeyException
+    if not draft.draft:
+      raise InvalidQuoteStateException
+    if account.key() != draft.parent_key():
+      raise NoPermissionException
+    return draft
+
+  @staticmethod
   def getByLegacyId(legacy_id):
     return Quote.all().filter('legacy_id =', legacy_id).get()
 
@@ -195,8 +221,8 @@ class Quote(search.SearchableModel):
       return quote
 
   @staticmethod
-  def getRecentQuotes(**kwargs):
-    return Quote.getQuotesByTimestamp('submitted', descending=True, **kwargs)
+  def getRecentQuotes(reversed=False, **kwargs):
+    return Quote.getQuotesByTimestamp('submitted', descending=not reversed, **kwargs)
 
   @staticmethod
   def getQuotesByBuildTime(**kwargs):
@@ -260,26 +286,29 @@ class Quote(search.SearchableModel):
 
   def publish(self, modified=None):
     if not self.draft:
-      raise NotInDraftMode
+      raise InvalidQuoteStateException
     def transaction():
       self.draft = False
       self.modified = modified or datetime.datetime.now()
       self.put()
       account = accounts.Account.get(self.parent_key())
-      logging.info("updating %s's quote count, %d -> %d", account.name, account.quote_count, account.quote_count + 1)
       account.quote_count += 1
       account.draft_count -= 1
       account.put()
     db.run_in_transaction(transaction)
-    system.incrementQuoteCount()
+    system.record(self.parent(), VERB_PUBLISHED, self)
     return self
 
-  def update(self, dialog=None):
+  def update(self, dialog=None, publish=False, modified=None):
     if not self.draft:
-      raise NotInDraftMode
+      raise InvalidQuoteStateException
     if dialog is not None:
       self.dialog_source = dialog
     self.rebuild()
+    if publish:
+      self.publish(modified=modified)
+    else:
+      system.record(self.parent(), VERB_UPDATED, self)
 
   def updateDialog(self):
     new_lines = list(DialogLine.parse(self))

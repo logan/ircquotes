@@ -62,6 +62,9 @@
         </div>
 {%   endif %}
       </div>
+{%   if account.isAdmin %}
+      <a id="admin_nav" class="nav" href="/admin">Admin</a>
+{%   endif %}
 {% endblock %}
       <div id="navbar">
         <div id="browse_control" class="nav">

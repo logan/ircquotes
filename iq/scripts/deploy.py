@@ -8,6 +8,7 @@ import sys
 
 IQ_DEPENDENCIES = [
   'minifb.py',
+  'pydispatch',
 ]
 
 GOOGLE_DEPENDENCIES = [
@@ -22,6 +23,10 @@ APP_CONFIG_TEMPLATE = {
   'runtime': 'python',
   'api_version': 1,
   'handlers': [
+    {
+      'url': r'/admin.*',
+      'script': 'admin.py',
+    },
     {
       'url': r'/facebook.*',
       'script': 'facebook.py',
@@ -42,7 +47,7 @@ APP_CONFIG_TEMPLATE = {
     },
     {
       'url': r'/.*',
-      'script': 'web.py',
+      'script': 'ui.py',
     },
   ],
 }
@@ -210,9 +215,9 @@ def main():
                  options.srcdir)
 
   generateYaml(options)
-  resolveIqDependencies(options)
 
   if options.app:
+    resolveIqDependencies(options)
     deployOnAppSpot(options.srcdir, googlebase, args)
   else:
     runDevAppServer(options.srcdir, googlebase, options.port, args)

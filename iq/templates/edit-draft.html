@@ -12,12 +12,12 @@ Expected variables:
 <h1>Editing Draft</h1>
 <hr>
 <form class="editor_form" method="POST" action="/edit-draft">
-  <input type="hidden" name="quote" value="{{ quote.key }}">
+  <input type="hidden" name="key" value="{{ quote.key }}">
   <table class="form">
     <tr>
       <td class="label">Quote:</td>
       <td>
-        <textarea name="dialog" rows="10" cols="80">{{draft.dialog_source|escape}}</textarea>
+        <textarea name="dialog" rows="10" cols="80">{{quote.dialog_source|escape}}</textarea>
       </td>
     </tr>
     <tr>

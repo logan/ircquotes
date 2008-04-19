@@ -5,6 +5,8 @@ import StringIO
 import time
 import wsgiref.handlers
 
+from pydispatch import dispatcher
+
 from google.appengine.api import urlfetch
 from google.appengine.ext import db
 from google.appengine.ext import webapp
@@ -16,12 +18,26 @@ import accounts
 import hash
 import mailer
 import quotes
+import service
 import system
-import web
+import ui
+
+def facebook(path, **kwargs):
+  logging.info('calling ui.ui with facebook/%r', path)
+  ui_decorator = ui.ui(os.path.join('facebook', path), **kwargs)
+  def decorator(f):
+    def wrapper(self):
+      self.facebook = FacebookSupport(self)
+      return f(self)
+    return ui_decorator(wrapper)
+  return decorator
+
 
 class FacebookSupport:
   def __init__(self, handler):
+    # minifb uses urllib2, but only urlfetch is available to us
     minifb.urllib2.urlopen = urlopenWrapper
+
     self.handler = handler
     session = handler.session
     sys = system.getSystem()
@@ -40,6 +56,7 @@ class FacebookSupport:
     if session.facebook_user:
       self.valid = True
       logging.info('facebook_user = %r', session.facebook_user)
+      dispatcher.connect(receiver=self.reportAction, sender=system.record)
       account = accounts.Account.getByFacebookId(session.facebook_user)
       if account:
         logging.info('Logging in via facebook id: %s', account.name)
@@ -72,69 +89,79 @@ class FacebookSupport:
     return minifb.call(method, self.fb_api_key, self.fb_secret, call_id=False,
                        session_key=session.facebook_session_key, **kwargs)
 
+  def reportAction(self, action):
+    reporter = getattr(self, 'report_%s' % action.verb, None)
+    if callable(reporter):
+      logging.info('[FB]: publishing %r action: %s', action.verb, action)
+      reporter(action)
 
-class FacebookPage(web.TemplatePage):
-  path = 'facebook/index.html'
+  def report_publish(self, action):
+    quote = action.targets[0]
+    self.facebook('feed.publishTemplatizedAction',
+                  title_template='{actor} added a'
+                                 ' <a href="{app}/quote?key={quote}">quote</a>'
+                                 ' to <a href="{app}">IrcQuotes</a>',
+                  title_data={'app': self.handler.request.application_url,
+                              'quote': str(quote.key()),
+                             },
+                  # XXX: facebook doesn't like any of the JSON encodings I tried
+                  format='XML',
+                 )
 
-  def loadSession(self):
-    web.TemplatePage.loadSession(self)
-    self.facebook = FacebookSupport(self)
 
-  def callFB(self, method, **kwargs):
-    return self.facebook(method, **kwargs)
-
-  def handlePost(self):
-    pass
-
-
-class LinkAccountPage(FacebookPage):
-  path = 'facebook/link-account.html'
-
-  def handlePost(self):
+class LinkAccountPage(service.LoginService):
+  @facebook('link-account.html')
+  def post(self):
     if self.request.get('new'):
-      self.new()
-      return
-    name = self.request.get('name')
-    password = self.request.get('password')
-    self['name'] = name
-    if name and password:
-      self.link(name, password)
+      return self.new()
+    if self.request.get('unlink'):
+      return self.unlink()
+    if self.login():
+      self.link()
+
+  def unlink(self):
+    self.account.facebook_id = None
+    self.account.put()
+    self.setAccount(accounts.Account.getAnonymous())
 
   def new(self):
-    if not self.session.facebook_user:
+    if not self.facebook.valid:
       return
-    userinfo = self.callFB('facebook.users.getInfo',
-                           fields='name',
-                           uids=self.session.facebook_user,
-                          )
+    userinfo = self.facebook('facebook.users.getInfo',
+                             fields='name',
+                             uids=self.session.facebook_user,
+                            )
     name = userinfo[0]['name']
 
-    # TODO: handle collisions
+    # TODO: Support different account namespaces
     logging.info('Creating facebook account for %s (%r)',
                  name, self.session.facebook_user)
-    account = accounts.Account.create(name='facebook:%s' % name,
-                                      email='facebook:%s' % self.session.facebook_user,
+    account = accounts.Account.create(name='facebook/%s' % name,
+                                      email='facebook/%s' % self.session.facebook_user,
                                       facebook_id=self.session.facebook_user,
                                      )
     self.setAccount(account)
 
-  def link(self, name, password):
+  def link(self):
+    name = self.request.get('name')
+    password = self.request.get('password')
     try:
       logging.info('logging in potential FB user: %s', name)
       account = accounts.Account.login(name, password)
-    except accounts.NoSuchNameException:
-      self['error'] = 'Invalid account name'
-    except accounts.InvalidPasswordException:
-      self['error'] = 'Password incorrect'
-    except accounts.NotActivatedException:
-      self['error'] = 'Account not activated'
-      self['activate'] = True
+    except accounts.AccountException, e:
+      self.template.exception = e
     else:
       if self.session.facebook_user:
         logging.info('linking %s to %d', account.name, self.session.facebook_user)
         account.facebook_id = self.session.facebook_user
         account.put()
         self.setAccount(account)
+
+
+class IndexPage(service.Service):
+  @facebook('index.html')
+  def post(self):
+    pass
 
 
 def urlopenWrapper(url, args):
@@ -147,7 +174,7 @@ def urlopenWrapper(url, args):
 def main():
   pages = [
     ('/facebook/link-account', LinkAccountPage),
-    ('/facebook/', FacebookPage),
+    ('/facebook/', IndexPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)

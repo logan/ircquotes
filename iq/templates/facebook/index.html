@@ -1,11 +1,21 @@
 {% extends "base.html" %}
+{% block subtitle %}
+{%   if not account.trusted %}
+Setup
+{%   endif %}
+{% endblock %}
+{% block header %}
+{%   if account.trusted %}
+{{ block.super }}
+{%   else %}
+{{ block.super }}: Setup
+{%   endif %}
+{% endblock %}
 {% block doc %}
-<fb:header>IrcQuotes</fb:header>
-
-{% if account.trusted %}
+{%   if account.trusted %}
 <fb:tabs>
   <fb:tab-item href="/ircquotes" title="Record a Quote" selected="true"/>
-  <fb:tab-item href="/ircquotes/settings" title="Settings"/>
+  <fb:tab-item href="/ircquotes/link-account" title="Settings"/>
 </fb:tabs>
 <fb:editor action="{{ request.application_url }}/submit">
   <input type="hidden" name="session" value="{{ session.id }}"/>
@@ -14,7 +24,7 @@
     <fb:editor-button value="Add"/>
   </fb:editor-buttonset>
 </fb:editor>
-{% else %}
+{%   else %}
 <fb:editor action="/ircquotes/link-account">
   <center style="font-weight: bold">
     Do you already have an IrcQuotes account?
@@ -24,5 +34,5 @@
     <fb:editor-button name="new" value="No, I'll Just Use Facebook"/>
   </fb:editor-buttonset>
 </fb:editor>
-{% endif %}
+{%   endif %}
 {% endblock %}
