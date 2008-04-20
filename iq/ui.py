@@ -56,6 +56,16 @@ class BrowsePage(browse.BrowseService):
                                                 account=quote.parent())
 
 
+class SearchPage(browse.BrowseService):
+  @ui('browse.html')
+  def get(self):
+    self.browseQuotes(browse.PageSpecifier(mode='search'))
+    if self.template.quotes:
+      for quote in self.template.quotes:
+        quote.owner_page = browse.PageSpecifier(mode='recent',
+                                                account=quote.parent())
+
+
 class SubmitPage(service.CreateDraftService):
   @ui('submit.html', require_trusted=True)
   def get(self):
@@ -131,6 +141,7 @@ def main():
     ('/delete', DeleteQuotePage),
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),
+    ('/search', SearchPage),
     ('/submit', SubmitPage),
     ('/logout', LogoutPage),
   ]

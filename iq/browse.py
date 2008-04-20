@@ -1,6 +1,6 @@
-import base64
 import datetime
 import logging
+import urllib
 
 import accounts
 import quotes
@@ -24,6 +24,7 @@ class PageSpecifier:
                size=DEFAULT_SIZE,
                reversed=False,
                account=None,
+               context=None,
               ):
     self.mode = mode
     self.start_value = start_value
@@ -31,6 +32,7 @@ class PageSpecifier:
     self.size = min(self.MAX_PAGE_SIZE, size)
     self.reversed = reversed
     self.account = account
+    self.context = context
 
   def copy(self, **overrides):
     kwargs = overrides.copy()
@@ -112,19 +114,25 @@ class BrowseService(service.Service):
         return
       page_spec = default_page
 
+    logging.info('page spec: %s', page_spec.encode())
     self.template.page = page_spec
     fetcher = getattr(self, 'fetch_%s' % page_spec.mode, None)
     if not callable(fetcher):
       self.template.exception = UnsupportedBrowseModeException()
-      return;
+      return
 
     quote_list, next_page_spec, prev_page_spec = fetcher(page_spec)
     self.template.quotes = quote_list
 
     def maybeExportPage(name, spec, require_full_page):
-      if spec and spec.start_value and spec.offset >= 0:
-        if not require_full_page or len(quote_list) == page_spec.size:
-          setattr(self.template, name, spec)
+      if not spec:
+        return
+      if spec.offset < 0:
+        return
+      if require_full_page and len(quote_list) < page_spec.size:
+        return
+      logging.info('template should include link to page spec: %r', spec)
+      setattr(self.template, name, spec)
     maybeExportPage('next_page', next_page_spec, True)
     maybeExportPage('prev_page', prev_page_spec, False)
 
@@ -147,4 +155,18 @@ class BrowseService(service.Service):
                                             )
     next = page.copy(offset=page.offset + page.size)
     prev = page.copy(offset=page.offset - page.size)
+    return quote_list, next, prev
+
+  def fetch_search(self, page):
+    query = self.request.get('q')
+    if not query:
+      self.template.quotes = []
+      return [], page, page
+    quote_list = quotes.Quote.search(query=query,
+                                     offset=page.offset,
+                                     limit=page.size,
+                                    )
+    context = 'q=%s' % urllib.quote(query)
+    next = page.copy(offset=page.offset + page.size, context=context)
+    prev = page.copy(offset=page.offset - page.size, context=context)
     return quote_list, next, prev

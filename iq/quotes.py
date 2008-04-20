@@ -278,11 +278,12 @@ class Quote(search.SearchableModel):
 
   @staticmethod
   def search(query, offset=0, limit=10):
-    query = Quote.all()
-    query.search(query)
-    query.filter('draft =', False)
-    query.filter('deleted =', False)
-    return list(query.fetch(offset=offset, limit=limit))
+    logging.info('quote search: query=%r, offset=%r, limit=%r', query, offset, limit)
+    db_query = Quote.all()
+    db_query.search(query)
+    db_query.filter('draft =', False)
+    db_query.filter('deleted =', False)
+    return list(db_query.fetch(offset=offset, limit=limit))
 
   def unpublish(self):
     self.deleted = True
