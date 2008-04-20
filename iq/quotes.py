@@ -18,11 +18,17 @@ class NoPermissionException(QuoteException): pass
 
 
 VERB_PUBLISHED = system.Verb('published')
+VERB_DELETED = system.Verb('deleted')
 VERB_UPDATED = system.Verb('updated')
 
 @system.capture(VERB_PUBLISHED)
 def onQuotePublished(action):
   system.incrementQuoteCount()
+
+
+@system.capture(VERB_DELETED)
+def onQuoteDeleted(action):
+  system.incrementQuoteCount(-1)
 
 
 class Network(db.Model):
@@ -79,11 +85,11 @@ class DialogLine(db.Model):
   NL = re.compile(r'\r?\n')
   INDENT = re.compile(r'^(\s*)')
   STATEMENT = re.compile(r'^(?P<timestamp>\d?\d:\d\d(:\d\d)?)?\s*'
-                         r"(<?(?P<actor>\W*[\w\d'\[\]{}\\|]+)\W*)?\s"
+                         r"(<?(?P<actor>\W*[\w\d'\[\]{}\\|-]+)\W*)?\s"
                          r'(?P<statement>.*)'
                         )
   TIME = re.compile(r'(?P<hour>\d?\d):(?P<minute>\d\d)(:(?P<second>\d\d))?')
-  NICK = re.compile(r"(?P<nick>[\w\d'\[\]{}\\|]+)")
+  NICK = re.compile(r"(?P<nick>[\w\d'\[\]{}\\|-]+)")
   WORD_SPLITTER = re.compile(r'\s+')
   WORD_STRIPPER = re.compile(r'\W+')
 
@@ -140,25 +146,6 @@ class DialogLine(db.Model):
                        text=statement,
                       )
 
-  def getSignature(self):
-    parts = []
-    if self.actor:
-      match = self.NICK.search(self.actor)
-      if match:
-        parts.append(match.group('nick'))
-    total = -1
-    words = self.WORD_SPLITTER.split(self.text)[:self.MAX_SIGNATURE_WORDS]
-    for word in words:
-      word = self.WORD_STRIPPER.sub('', word)
-      total += len(word) + 1
-      if total > self.MAX_SIGNATURE_LEN:
-        if not parts:
-          parts.append(word[:self.MAX_SIGNATURE_LEN])
-        break
-      parts.append(word)
-    if total >= self.MIN_SIGNATURE_LEN:
-      return ' '.join(parts)
-
 
 class Quote(search.SearchableModel):
   draft = db.BooleanProperty(required=True, default=True)
@@ -168,8 +155,8 @@ class Quote(search.SearchableModel):
   context = db.ReferenceProperty(Context)
   dialog_source = db.TextProperty(required=True)
   note = db.TextProperty()
-  signature = db.StringListProperty()
   legacy_id = db.IntegerProperty()
+  deleted = db.BooleanProperty(default=False)
 
   @staticmethod
   def createDraft(account, source,
@@ -201,6 +188,8 @@ class Quote(search.SearchableModel):
   @staticmethod
   def getDraft(account, key):
     draft = Quote.getQuoteByKey(account, key)
+    if not draft or draft.deleted:
+      raise InvalidKeyException
     if not draft.draft:
       raise InvalidQuoteStateException
     return draft
@@ -208,7 +197,7 @@ class Quote(search.SearchableModel):
   @staticmethod
   def getQuoteByKey(account, key):
     quote = Quote.get(key)
-    if not quote:
+    if not quote or quote.deleted:
       raise InvalidKeyException
     if quote.draft and account.key() != quote.parent_key():
       raise NoPermissionException
@@ -216,12 +205,15 @@ class Quote(search.SearchableModel):
 
   @staticmethod
   def getByLegacyId(legacy_id):
-    return Quote.all().filter('legacy_id =', legacy_id).get()
+    query = Quote.all()
+    query.filter('legacy_id =', legacy_id)
+    query.filter('deleted =', False)
+    return query.get()
 
   @staticmethod
   def getPublishedQuote(key):
     quote = Quote.get(key)
-    if quote and not quote.draft:
+    if quote and not quote.deleted and not quote.draft:
       return quote
 
   @staticmethod
@@ -236,13 +228,22 @@ class Quote(search.SearchableModel):
     return Quote.getQuotesByTimestamp('built', **kwargs)
 
   @staticmethod
-  def getQuotesByTimestamp(property, start=None, offset=0, limit=10,
-                           descending=False, include_drafts=True):
-    logging.info('quotes by ts: property=%s, start=%s, offset=%s limit=%s, descending=%s, drafts=%s',
-                 property, start, offset, limit, descending, include_drafts)
+  def getQuotesByTimestamp(property,
+                           start=None,
+                           offset=0,
+                           limit=10,
+                           descending=False,
+                           include_drafts=True,
+                           ancestor=None,
+                          ):
+    logging.info('quotes by ts: property=%s, start=%s, offset=%s limit=%s, descending=%s, drafts=%s, ancestor=%s',
+                 property, start, offset, limit, descending, include_drafts, ancestor)
     query = Quote.all()
+    if ancestor:
+      query.ancestor(ancestor)
     if not include_drafts:
       query.filter('draft =', False)
+    query.filter('deleted =', False)
     op = '>='
     if descending:
       op = '<='
@@ -266,30 +267,27 @@ class Quote(search.SearchableModel):
     return quotes, start, offset
 
   @staticmethod
-  def getAccountQuotes(name, offset=0, limit=10, order='-submitted'):
-    account = accounts.Account.getByName(name)
-    if not account:
-      return []
-    query = (Quote.all()
-             .ancestor(account)
-             .filter('draft =', False)
-             .order(order)
-            )
-    return list(query.fetch(offset=offset, limit=limit))
-
-  @staticmethod
   def getDraftQuotes(account, offset=0, limit=10, order='-submitted'):
     query = (Quote.all()
              .ancestor(account)
              .filter('draft =', True)
+             .filter('deleted =', False)
              .order(order)
             )
     return list(query.fetch(offset=offset, limit=limit))
 
   @staticmethod
   def search(query, offset=0, limit=10):
-    query = Quote.all().search(query).filter('draft =', False)
+    query = Quote.all()
+    query.search(query)
+    query.filter('draft =', False)
+    query.filter('deleted =', False)
     return list(query.fetch(offset=offset, limit=limit))
+
+  def unpublish(self):
+    self.deleted = True
+    self.put()
+    system.record(self.parent(), VERB_DELETED, self)
 
   def publish(self, modified=None):
     if not self.draft:
@@ -323,9 +321,6 @@ class Quote(search.SearchableModel):
     if old_lines:
       db.delete(old_lines)
     db.put(new_lines)
-    signatures = [line.getSignature() for line in new_lines]
-    self.signature = [s for s in signatures if s]
-    self.put()
     return new_lines
 
   def getDialog(self, sorted=True):
@@ -333,22 +328,6 @@ class Quote(search.SearchableModel):
     if sorted:
       query.order('offset')
     return query
-
-  def findDuplicates(self):
-    scores = {}
-    logging.info('Checking for dupes:')
-    for line in self.signature:
-      logging.info('  sig: %s', line)
-      query = Quote.all().filter('signature =', line)
-      for match in (l.key() for l in query):
-        if self.key() != match:
-          logging.info('    match: %s', match)
-          scores.setdefault(match, 0)
-          scores[match] += 1
-    logging.info('matches: %s', scores)
-    matches = scores.keys()
-    matches.sort(cmp=lambda a, b: cmp(scores[b], scores[a]))
-    return matches
 
   def rebuild(self):
     self.built = datetime.datetime.now()

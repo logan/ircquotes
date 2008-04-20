@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<center>
+  Are you sure you want to delete this quote?
+  <form method="POST" action="/delete">
+    <input type="hidden" name="key" value="{{ quote.key|escape }}">
+    <input type="hidden" name="return_url" value="{{ return_url|escape }}">
+    <input type="submit" name="really-do-it" value="Yes, delete it!">
+  </form>
+</center>
+{%   include "render-quote.html" %}
+{% endblock %}

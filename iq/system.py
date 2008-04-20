@@ -59,10 +59,10 @@ def getSystem():
   return system
 
 
-def incrementQuoteCount():
+def incrementQuoteCount(amount=1):
   def transaction():
     system = getSystem()
-    system.quote_count += 1
+    system.quote_count += amount
     system.put()
   db.run_in_transaction(transaction)
 

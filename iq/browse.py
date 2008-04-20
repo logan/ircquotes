@@ -1,8 +1,8 @@
 import base64
 import datetime
 import logging
-import urllib
 
+import accounts
 import quotes
 import service
 
@@ -22,12 +22,15 @@ class PageSpecifier:
                start_value=None,
                offset=0,
                size=DEFAULT_SIZE,
-               reversed=False):
+               reversed=False,
+               account=None,
+              ):
     self.mode = mode
     self.start_value = start_value
     self.offset = offset
     self.size = min(self.MAX_PAGE_SIZE, size)
     self.reversed = reversed
+    self.account = account
 
   def copy(self, **overrides):
     kwargs = overrides.copy()
@@ -39,6 +42,7 @@ class PageSpecifier:
     copyAttribute('offset')
     copyAttribute('size')
     copyAttribute('reversed')
+    copyAttribute('account')
     logging.info('page copy: %r', kwargs)
     return PageSpecifier(**kwargs)
 
@@ -58,6 +62,8 @@ class PageSpecifier:
         kwargs['size'] = int(param[2:])
       elif param.startswith('r='):
         kwargs['reversed'] = bool(int(param[2:]))
+      elif param.startswith('a='):
+        kwargs['account'] = accounts.Account.getByName(param[2:])
     return PageSpecifier(**kwargs)
 
   def encode(self):
@@ -70,6 +76,8 @@ class PageSpecifier:
       params.append(('s', self.size))
     if self.reversed:
       params.append(('r', '1'))
+    if self.account:
+      params.append(('a', self.account.name))
     return ';'.join('%s=%s' % param for param in params)
     
   @staticmethod
@@ -125,6 +133,7 @@ class BrowseService(service.Service):
                                           offset=page.offset,
                                           limit=page.size,
                                           reversed=page.reversed,
+                                          ancestor=page.account,
                                          )
     quote_list, start, offset = result
     next = page.copy(start_value=start, offset=offset)

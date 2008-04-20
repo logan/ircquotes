@@ -1,8 +1,28 @@
 <div class="quote">
   <div class="quote_header roundtop">
-    <span class="quote_by">Quote by {{ quote.parent.name|escape }}</span>
+    <span class="quote_by">
+      Quote by
+{% if quote.owner_page %}
+      <a href="/browse?page={{ quote.owner_page.encode|urlencode }}">{{ quote.parent.name|escape }}</a>
+{% else %}
+      {{ quote.parent.name|escape }}
+{% endif %}
+    </span>
     <span class="quote_context">...</span>
     <span class="quote_date">Submitted: {{ quote.submitted }}</span>
+{% if not preview %}
+    <div class="nav quote_options">
+      <span class="quote_options_control">Options &#9662;</span>
+      <div class="quote_options_menu menu" style="display: none">
+{%   ifequal account.key quote.parent_key %}
+{%     if quote.draft %}
+        <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit</a>
+{%     endif %}
+        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ request.url|urlencode }}">Delete Quote</a>
+{%   endifequal %}
+{% endif %}
+      </div>
+    </div>
     <span class="quote_date">Last Modified: {{ quote.modified }}</span>
   </div>
   <table class="quote_source" cellspacing="0">

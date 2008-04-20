@@ -288,3 +288,11 @@ class QuoteService(Service):
       return quote
     except quotes.QuoteException, e:
       self.template.exception = e
+
+
+class DeleteQuoteService(QuoteService):
+  def delete(self):
+    quote = self.getQuote()
+    if quote and self.request.get('really-do-it'):
+      quote.unpublish()
+      return True

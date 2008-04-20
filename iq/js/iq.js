@@ -25,13 +25,11 @@ function roundCorners() {
 }
 addLoadEvent(roundCorners);
 
-function toggleMenu(id, control) {
-  var menu = $(id + "_menu");
-
+function toggleMenu(menu, type, control) {
   toggleElementClass("active", control);
   if (getStyle(menu, "display") == "none") {
     slideDown(menu, {"duration": 0.5});
-    if (id == "user") {
+    if (type == "user") {
       var account = $("signin_account");
 
       if (account) {
@@ -49,13 +47,27 @@ function setupMenu(id) {
       return;
     }
     toggleElementClass("menu", $(id + "_menu"));
-    $(id + "_control").onclick = function() { toggleMenu(id, this); };
+    $(id + "_control").onclick = partial(toggleMenu, $(id + "_menu"), id, $(id + "_control"));
     roundElement($(id + "_menu"), {"corners": "bl br"});
   }
   addLoadEvent(setup);
 }
 setupMenu("browse");
 setupMenu("user");
+
+function setupQuoteMenus() {
+  map(setupQuoteMenu, getElementsByTagAndClassName("*", "quote_options"));
+}
+
+function setupQuoteMenu(elem) {
+  var control = getFirstElementByTagAndClassName("*", "quote_options_control", elem);
+  var menu = getFirstElementByTagAndClassName("*", "quote_options_menu", elem);
+
+  control.onclick = partial(toggleMenu, menu, "quote", control);
+  roundElement(menu, {"corners": "bl br"});
+}
+
+addLoadEvent(setupQuoteMenus);
 
 function SignInForm() {
   this.form = $("signin_form");

@@ -71,9 +71,10 @@
         <div id="browse_control" class="nav">
           Quotes &#9662;
           <div id="browse_menu" style="display: none">
-            <a href="/browse-recent">Recent</a>
+            <a href="/browse">Recent</a>
 {% if account.trusted %}
-            <a href="/browse?page={{ draft_page.encode|urlencode }}">Drafts</a>
+            <a href="/browse?page={{ my_page.encode|urlencode }}">My Quotes</a>
+            <a href="/browse?page={{ draft_page.encode|urlencode }}">My Drafts</a>
 {% endif %}
           </div>
         </div>

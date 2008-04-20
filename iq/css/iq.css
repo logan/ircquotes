@@ -51,6 +51,7 @@ body {
   padding: 0.5ex;
   text-align: left;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .menu a:hover {
@@ -67,6 +68,10 @@ body {
 
 #user_menu {
   right: 0.5em;
+}
+
+.quote_options {
+  float: right;
 }
 
 #signin_form {

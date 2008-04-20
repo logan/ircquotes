@@ -20,6 +20,8 @@ def ui(path, **kwargs):
         self.facebook = facebook.FacebookSupport(self)
         if self.account.trusted:
           self.template.draft_page = browse.PageSpecifier(mode='draft')
+          self.template.my_page = browse.PageSpecifier(mode='recent',
+                                                       account=self.account)
       tmpl = service.Template()
       f(self, template=tmpl, pre_hook=pre_hook)
       self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
@@ -36,14 +38,22 @@ class IndexPage(browse.BrowseService):
 class QuotePage(service.QuoteService):
   @ui('quote.html')
   def get(self):
-    if not self.getQuote():
+    quote = self.getQuote()
+    if quote:
+      quote.owner_page = browse.PageSpecifier(mode='recent',
+                                              account=quote.parent())
+    else:
       self.response.set_status(404)
 
 
 class BrowsePage(browse.BrowseService):
   @ui('browse.html')
   def get(self):
-    self.browseQuotes()
+    self.browseQuotes(browse.PageSpecifier(mode='recent'))
+    if self.template.quotes:
+      for quote in self.template.quotes:
+        quote.owner_page = browse.PageSpecifier(mode='recent',
+                                                account=quote.parent())
 
 
 class SubmitPage(service.CreateDraftService):
@@ -61,16 +71,31 @@ class SubmitPage(service.CreateDraftService):
 class EditDraftPage(service.EditDraftService):
   @ui('edit-draft.html', require_trusted=True)
   def get(self):
+    self.template.preview = True
     self.getDraft()
 
   @ui('edit-draft.html', require_trusted=True)
   def post(self):
+    self.template.preview = True
     if self.request.get('save'):
       self.save()
     elif self.request.get('discard'):
       self.discard()
     elif self.request.get('publish'):
       self.publish()
+
+
+class DeleteQuotePage(service.DeleteQuoteService):
+  @ui('delete.html')
+  def get(self):
+    self.template.return_url = self.request.get('return_url')
+    self.template.preview = True
+    self.getQuote()
+
+  @ui('delete.html')
+  def post(self):
+    if self.delete():
+      self.redirect(self.request.get('return_url', '/'))
 
 
 class CreateAccountPage(service.CreateAccountService):
@@ -99,10 +124,11 @@ class LogoutPage(service.LogoutService):
 
 def main():
   pages = [
-    ('/', IndexPage),
+    ('/', BrowsePage),
     ('/activate', ActivationPage),
     ('/browse', BrowsePage),
     ('/create-account', CreateAccountPage),
+    ('/delete', DeleteQuotePage),
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),
     ('/submit', SubmitPage),
