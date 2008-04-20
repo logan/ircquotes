@@ -9,6 +9,7 @@ import sys
 IQ_DEPENDENCIES = [
   'minifb.py',
   'pydispatch',
+  'simplejson',
 ]
 
 GOOGLE_DEPENDENCIES = [
@@ -58,45 +59,90 @@ APP_CONFIG_TEMPLATE = {
   ],
 }
 
-INDEX_CONFIG = {
-  'indexes': [
-    {
-      'kind': 'Context',
-      'properties': [
-        {'name': 'location'},
-        {'name': 'network'},
-        {'name': 'protocol'},
-      ],
-    },
-    {'kind': 'DialogLine', 'ancestor': 'yes'},
-    {
-      'kind': 'Quote',
-      'properties': [
-        {'name': '__searchable_text_index'},
-        {'name': 'draft'},
-      ],
-    },
-    {
-      'kind': 'Quote',
-      'properties': [
-        {'name': 'draft'},
-        {'name': 'submitted', 'direction': 'desc'},
-      ],
-    },
-    {
-      'kind': 'Quote',
-      'properties': [{'name': 'submitted', 'direction': 'desc'}],
-    },
-    {
-      'kind': 'Quote',
-      'ancestor': 'yes',
-      'properties': [
-        {'name': 'draft'},
-        {'name': 'submitted', 'direction': 'desc'},
-      ],
-    },
-  ],
-}
+def IndexSet(*kinds):
+  indices = []
+  for kind in kinds:
+    indices.extend(kind)
+  return {'indexes': indices}
+
+
+def Kind(name, *indices):
+  for ancestor, properties in indices:
+    index = {'kind': name}
+    if properties:
+      index['properties'] = properties
+    if ancestor:
+      index['ancestor'] = 'yes'
+    yield index
+
+
+def Index(*properties, **kwargs):
+  ancestor = kwargs.get('ancestor', False)
+  return ancestor, list(properties)
+
+
+def Property(name):
+  property = {'name': name}
+  if name.startswith('-'):
+    property['name'] = name[1:]
+    property['direction'] = 'desc'
+  return property
+
+
+INDEX_CONFIG = IndexSet(
+    Kind('DialogLine',
+         Index(ancestor=True),
+         Index(Property('offset'), ancestor=True),
+    ),
+
+    Kind('Quote',
+         Index(Property('__searchable_text_index'),
+               Property('deleted'),
+               Property('draft'),
+              ),
+
+         Index(Property('deleted'),
+               Property('submitted'),
+              ),
+
+         Index(Property('deleted'),
+               Property('-submitted'),
+              ),
+
+         Index(Property('deleted'),
+               Property('draft'),
+               Property('submitted'),
+              ),
+
+         Index(Property('deleted'),
+               Property('draft'),
+               Property('-submitted'),
+              ),
+
+         Index(Property('deleted'),
+               Property('submitted'),
+               ancestor=True,
+              ),
+
+         Index(Property('deleted'),
+               Property('-submitted'),
+               ancestor=True,
+              ),
+
+         Index(Property('deleted'),
+               Property('draft'),
+               Property('submitted'),
+               ancestor=True,
+              ),
+
+         Index(Property('deleted'),
+               Property('draft'),
+               Property('-submitted'),
+               ancestor=True,
+              ),
+
+        ),
+)
 
 def saveYaml(data, path):
   import yaml

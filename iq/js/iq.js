@@ -26,6 +26,10 @@ function roundCorners() {
 addLoadEvent(roundCorners);
 
 function Menu(type, control, menu) {
+  if (!control || !menu) {
+    return;
+  }
+
   this.type = type;
   this.control = control;
   this.menu = menu;

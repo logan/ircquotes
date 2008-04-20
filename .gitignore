@@ -1,7 +1,8 @@
 *.sw?
 *.py?
-minifb.py
-iqconfig.py
-simplejson
 iq/app.yaml
 iq/index.yaml
+iq/minifb.py
+iq/pydispatch
+iq/simplejson
+iqconfig.py

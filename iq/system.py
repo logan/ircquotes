@@ -56,6 +56,7 @@ def getSystem():
   system = System.get_by_key_name(System.SYSTEM_KEY_NAME)
   if not system:
     system = System(key_name=System.SYSTEM_KEY_NAME)
+    system.put()
   return system
 
 
