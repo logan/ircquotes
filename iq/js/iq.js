@@ -25,48 +25,54 @@ function roundCorners() {
 }
 addLoadEvent(roundCorners);
 
-function toggleMenu(menu, type, control) {
-  toggleElementClass("active", control);
-  if (getStyle(menu, "display") == "none") {
-    slideDown(menu, {"duration": 0.5});
-    if (type == "user") {
+function Menu(type, control, menu) {
+  this.type = type;
+  this.control = control;
+  this.menu = menu;
+
+  addElementClass(menu, "menu");
+  control.onclick = bind(this.toggle, this);
+  roundElement(this.menu, {"corners": "bl br"});
+}
+
+Menu.prototype.toggle = function() {
+  toggleElementClass("active", this.control);
+  if (getStyle(this.menu, "display") == "none") {
+    var options = {"duration": 0.5};
+
+    if (this.type == "user") {
       var account = $("signin_account");
 
       if (account) {
-        account.focus();
+        options.after = bind(account.focus, account);
       }
     }
+    slideDown(this.menu, options);
   } else {
-    slideUp(menu, {"duration": 0.5});
+    slideUp(this.menu, {"duration": 0.5});
   }
 }
 
-function setupMenu(id) {
-  function setup() {
-    if (!$(id + "_menu")) {
-      return;
-    }
-    toggleElementClass("menu", $(id + "_menu"));
-    $(id + "_control").onclick = partial(toggleMenu, $(id + "_menu"), id, $(id + "_control"));
-    roundElement($(id + "_menu"), {"corners": "bl br"});
-  }
-  addLoadEvent(setup);
+function setupGlobalMenu(type) {
+  new Menu(type, $(type + "_control"), $(type + "_menu"));
 }
-setupMenu("browse");
-setupMenu("user");
 
-function setupQuoteMenus() {
-  map(setupQuoteMenu, getElementsByTagAndClassName("*", "quote_options"));
+function setupGlobalMenus() {
+  setupGlobalMenu("browse");
+  setupGlobalMenu("user");
 }
+addLoadEvent(setupGlobalMenus);
 
 function setupQuoteMenu(elem) {
   var control = getFirstElementByTagAndClassName("*", "quote_options_control", elem);
   var menu = getFirstElementByTagAndClassName("*", "quote_options_menu", elem);
 
-  control.onclick = partial(toggleMenu, menu, "quote", control);
-  roundElement(menu, {"corners": "bl br"});
+  new Menu("quote", control, menu);
 }
 
+function setupQuoteMenus() {
+  map(setupQuoteMenu, getElementsByTagAndClassName("*", "quote_options"));
+}
 addLoadEvent(setupQuoteMenus);
 
 function SignInForm() {
