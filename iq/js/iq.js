@@ -57,57 +57,82 @@ function setupMenu(id) {
 setupMenu("browse");
 setupMenu("user");
 
-function toggleSignInFormEnabled() {
-  $("signin_account").disabled = !$("signin_account");
-  $("signin_password").disabled = !$("signin_password");
-  toggleElementClass("disabled", $("signin_account"));
-  toggleElementClass("disabled", $("signin_password"));
-  toggleElementClass("disabled", $("signin_button"));
+function SignInForm() {
+  this.form = $("signin_form");
+  if (!this.form) {
+    return;
+  }
+
+  this.ERROR_MESSAGES = {
+    "NoSuchNameException": "Invalid account name",
+    "InvalidPasswordException": "Invalid password",
+    "NotActivatedException": "This account has not been activated",
+  };
+
+  this.button = $("signin_button");
+  this.account = $("signin_account");
+  this.password = $("signin_password");
+  this.status = $("signin_status_message");
+  this.throbber = new Throbber(32);
+
+  this.account.onkeydown = bind(this.onKeyDown, this);
+  this.password.onkeydown = bind(this.onKeyDown, this);
+}
+
+SignInForm.prototype.toggleEnabled = function() {
+  this.account.disabled = !this.account.disabled;
+  this.password.disabled = !this.password.disabled;
+  this.button.disabled = !this.button.disabled;
+  toggleElementClass("disabled", this.account);
+  toggleElementClass("disabled", this.password);
+  toggleElementClass("disabled", this.button);
   map(function(e) {
-        e.style["background"] = $("signin_button").style["background"];
+        e.style["background"] = this.button.style["background"];
       }, getElementsByTagAndClassName("*", "*", $("user_menu")));
 };
 
-function handleSignInResponse(response) {
+SignInForm.prototype.handleResponse = function(response) {
+  this.throbber.stop();
   if (response.success) {
     slideUp($("user_menu"), {"duration": 0.5});
     window.location.reload();
   } else {
-    displaySignInError(response.exception);
+    this.displayError(this.ERROR_MESSAGES[response.exception]);
   }
 }
 
-function handleSignInError(response) {
-  displaySignInError("" + response);
+SignInForm.prototype.handleError = function(response) {
+  this.throbber.stop();
+  this.displayError("" + response);
 }
 
-function displaySignInError(msg) {
-  toggleSignInFormEnabled();
-  $("signin_status").innerHTML = msg;
+SignInForm.prototype.displayError = function(msg) {
+  this.toggleEnabled();
+  this.status.innerHTML = msg;
 }
 
-function maybeSignIn() {
-  var controls = getElementsByTagAndClassName("input", "*", $("signin_form"));
-  var account = $("signin_account");
-  var password = $("signin_password");
+SignInForm.prototype.maybeSubmit = function() {
+  var controls = getElementsByTagAndClassName("input", "*", this.form);
 
-  if (account.value.replace(/\s+/g, "").length == 0) {
-    account.focus();
-  } else if (password.value.length == 0) {
-    password.focus();
+  if (this.account.value.replace(/\s+/g, "").length == 0) {
+    this.account.focus();
+  } else if (this.password.value.length == 0) {
+    this.password.focus();
   } else {
-    toggleSignInFormEnabled();
-    $("signin_status").innerHTML = "Logging in ...";
+    this.toggleEnabled();
+    this.throbber.start($("signin_throbber"));
+    this.status.innerHTML = "Logging in...";
 
     var d_result = loadJSONDoc("/json/login",
-                               {"name": account.value,
-                                "password": password.value});
+                               {"name": this.account.value,
+                                "password": this.password.value});
 
-    d_result.addCallbacks(handleSignInResponse, handleSignInError);
+    d_result.addCallbacks(bind(this.handleResponse, this),
+                          bind(this.handleError, this));
   }
 }
 
-function handleSignInKeyDown(e) {
+SignInForm.prototype.onKeyDown = function(e) {
   var code;
 
   if (window.event) {
@@ -116,31 +141,50 @@ function handleSignInKeyDown(e) {
     code = e.which;
   }
   if (code == 13) {
-    maybeSignIn();
+    this.maybeSubmit();
   }
 }
 
-function signOut() {
-  slideUp($("user_menu"), {"duration": 0.5});
-  window.location.href = "/logout";
-}
+addLoadEvent(function() { new SignInForm(); });
 
-function setupSignInForm() {
-  function setup() {
-    if ($("signin_button")) {
-      $("signin_button").onclick = maybeSignIn;
-      $("signin_account").onkeydown = handleSignInKeyDown;
-      $("signin_password").onkeydown = handleSignInKeyDown;
-    } else if ($("signout_button")) {
-      $("signout_button").onclick = signOut;
-    }
+
+function SignUpForm() {
+  this.form = $("create_account_form");
+
+  if (!this.form) {
+    return;
   }
-  addLoadEvent(setup);
+
+  this.button = $("create_account_button");
+  this.name = $("create_account_name");
+  this.email = $("create_account_email");
+  this.password1 = $("create_account_password1");
+  this.password2 = $("create_account_password2");
+
+  this.button.disabled = true;
+  this.button.onclick = bind(this.submit, this);
+
+  this.name.onkeyup = bind(partial(this.maybeCheckField, "name"), this);
+  this.checking_name = false;
+
+  this.email.onkeyup = bind(partial(this.maybeCheckField, "email"), this);
+  this.checking_email = false;
+
+  this.password1.onkeyup = bind(this.check, this);
+  this.password2.onkeyup = bind(this.check, this);
+
+  roundElement("create_account", null);
+
+  var node = getFirstElementByTagAndClassName("*", "step_by_step", "create_account");
+
+  if (node) {
+    roundElement(node, null);
+  }
+
+  this.name.focus();
 }
-setupSignInForm();
 
-
-function markSignUpFormError(field, msg) {
+SignUpForm.prototype.markError = function(field, msg) {
   var n = (field == null || field == "*")
           ? "create_account_msg"
           : "create_account_" + field + "_msg";
@@ -150,7 +194,7 @@ function markSignUpFormError(field, msg) {
   $(n).innerHTML = msg;
 }
 
-function clearSignUpFormError(field, msg) {
+SignUpForm.prototype.clearError = function(field, msg) {
   var n = (field == null || field == "*")
           ? "create_account_msg"
           : "create_account_" + field + "_msg";
@@ -163,53 +207,61 @@ function clearSignUpFormError(field, msg) {
   }
 }
 
-function maybeCheckSignUpField(field) {
-  var node = $("create_account_" + field);
+SignUpForm.prototype.maybeCheckField = function(field) {
+  var node = this[field];
 
-  if (node.checking) {
-    node.pending = true;
+  if (!node.value) {
     return;
   }
-  node.checking_deferred = checkSignUpField(field);
-  node.checking = true;
-  node.pending = false;
+  if (this["checking_" + field]) {
+    this["pending_" + field] = true;
+    return;
+  }
+  this["checking_deferred_" + field] = this.checkField(field);
+  this["checking_" + field] = true;
+  this["pending_" + field] = false;
 }
 
-function checkSignUpField(field) {
-  var n = "create_account_" + field;
-  var m = n + "_msg";
+SignUpForm.prototype.handleCheckFieldResponse = function(field, response) {
+  var error = response[field + "_error"];
+
+  if (error) {
+    this.markError(field, error);
+  } else {
+    var msg = null;
+
+    if (field == "name") {
+      msg = "Available!";
+    }
+    this.clearError(field, msg);
+  }
+  this["checking_" + field] = false;
+  if (this["pending_" + field]) {
+    this.maybeCheckField(field);
+  }
+}
+
+SignUpForm.prototype.checkField = function(field) {
+  var node = this[field];
+  var m = "create_account_" + field + "_msg";
   var params = {};
 
-  params[field] = $(n).value;
+  params[field] = node.value;
 
   var d_result = loadJSONDoc("/json/create-account", params);
 
-  $(n).checking = d_result;
-  d_result.addCallback(function(response) {
-                         var error = response[field + "_error"];
-
-                         if (error) {
-                           markSignUpFormError(field, error);
-                         } else {
-                           clearSignUpFormError(field, null);
-                         }
-                       });
-  d_result.addCallback(function() {
-                         $(n).checking = false;
-                         if ($(n).pending) {
-                           maybeCheckSignUpField(field);
-                         }
-                       });
-  d_result.addErrback(handleSignUpError);
+  this["checking_" + field] = d_result;
+  d_result.addCallbacks(bind(partial(this.handleCheckFieldResponse, field),
+                             this),
+                        bind(this.handleError, this));
 }
 
-function handleSignUpError(error) {
-  markSignUpFormError("*", error);
+SignUpForm.prototype.handleError = function(error) {
+  this.markError("*", error);
 }
 
-function validateSignUpName() {
-  var name = $("create_account_name").value
-             .replace(/^\s+/, "").replace(/\s+$/, "");
+SignUpForm.prototype.validateName = function() {
+  var name = this.name.value.replace(/^\s+/, "").replace(/\s+$/, "");
   var msg;
 
   if (name.length == 0) {
@@ -226,14 +278,13 @@ function validateSignUpName() {
   }
 
   if (!hasElementClass($("create_account_name_msg"), "error")) {
-    markSignUpFormError("name", msg);
+    this.markError("name", msg);
   }
   return false;
 }
 
-function validateSignUpEmail() {
-  var email = $("create_account_email").value
-              .replace(/^\s+/, "").replace(/\s+$/, "");
+SignUpForm.prototype.validateEmail = function() {
+  var email = this.email.value.replace(/^\s+/, "").replace(/\s+$/, "");
 
   if (email.length == 0) {
     return false;
@@ -242,103 +293,122 @@ function validateSignUpEmail() {
   } else if (!email.match(/^.+@.+\...+$/)) {
     msg = "This doesn't look like a valid email address.";
   } else {
-    clearSignUpFormError("email", null);
+    this.clearError("email", null);
     return true;
   }
-  markSignUpFormError("email", msg);
+  this.markError("email", msg);
   return false;
 }
 
-function validateSignUpPassword() {
-  var password1 = $("create_account_password1").value;
-  var password2 = $("create_account_password2").value;
+SignUpForm.prototype.validatePassword = function() {
+  var password1 = this.password1.value;
+  var password2 = this.password2.value;
 
   if (password1 != password2) {
     if (password2.length > 0) {
-      markSignUpFormError("password", "Passwords do not match");
+      this.markError("password", "Passwords do not match");
+    } else {
+      this.clearError("password", null);
     }
     return false;
   }
+  this.clearError("password", null);
   return password1.length > 0;
 }
 
-function checkSignUpForm() {
+SignUpForm.prototype.check = function() {
   var ok = true;
 
-  ok &= validateSignUpName();
-  ok &= validateSignUpEmail();
-  ok &= validateSignUpPassword();
-  $("create_account_button").disabled = !ok;
+  ok &= this.validateName();
+  ok &= this.validateEmail();
+  ok &= this.validatePassword();
+  this.button.disabled = !ok;
 }
 
-function submitSignUpForm() {
+SignUpForm.prototype.handleSubmitResponse = function(response) {
+  if (!response) {
+    this.handleError("Server side error");
+    return;
+  }
+  if (response.created) {
+    this.handleSuccess(response.name, response.email,
+                       response.activation,
+                       response.confirmation);
+  } else {
+    if (response.name_error) {
+      this.markError("name", response.name_error);
+    }
+    if (response.password_error) {
+      this.markError("password", response.password_error);
+    }
+    this.markError("*", response.exception);
+  }
+}
+
+SignUpForm.prototype.submit = function() {
   var params = {
     "create": "1",
-    "name": $("create_account_name").value,
-    "email": $("create_account_email").value,
-    "password": $("create_account_password1").value
+    "name": this.name.value,
+    "email": this.email.value,
+    "password": this.password1.value
   };
   var d_response = loadJSONDoc("/json/create-account", params);
 
-  d_response.addCallback(function(response) {
-                           if (!response) {
-                             handleSignUpError("Server side error");
-                             return;
-                           }
-                           if (response.created) {
-                             handleSignUpSuccess(response.name, response.email,
-                                                 response.activation,
-                                                 response.confirmation);
-                           } else {
-                             if (response.name_error) {
-                               markSignUpFormError("name", response.name_error);
-                             }
-                             if (response.password_error) {
-                               markSignUpFormError("password", response.password_error);
-                             }
-                             markSignUpFormError("*", response.exception);
-                           }
-                         });
-  d_response.addErrback(handleSignUpError);
-  d_response.addCallback(checkSignUpForm);
+  d_response.addCallbacks(bind(this.handleSubmitResponse, this),
+                          bind(this.handleError, this));
+  d_response.addCallback(bind(this.check, this));
 }
 
-function handleSignUpSuccess(name, email, activation, confirmation) {
+SignUpForm.prototype.handleSuccess =
+    function(name, email, activation, confirmation) {
   var success = $("create_account_success");
   var link = $("create_account_activation_link");
 
-  link.setAttribute("href", "/activate?name=" + encodeURI(name)
-                    + (activation ? "&activation=" + activation : ""));
+  if (activation && link) {
+    link.setAttribute("href", "/activate?name=" + encodeURI(name)
+                      + (activation ? "&activation=" + activation : ""));
+  }
+  if (confirmation && $("create_account_activation_email")) {
+    $("create_account_activation_email").innerHTML = "<pre>" + confirmation + "</pre>";
+  }
   success.innerHTML = success.innerHTML.replace(/\$email/g, email);
   hideElement("create_account_form");
   showElement("create_account_success");
-  if (confirmation) {
-    document.writeln("<pre>" + confirmation + "</pre>");
-  }
 }
 
-function installSignUpForm() {
-  if (!$("create_account_form")) {
+addLoadEvent(function() { new SignUpForm(); });
+
+function Throbber(size) {
+  this.size = size;
+  this.delay = 1. / 32;
+  this.frame = 1;
+  this.stopped = true;
+}
+
+Throbber.prototype.start = function(container) {
+  this.container = container;
+  this.stopped = false;
+  this.animateFrame();
+}
+
+Throbber.prototype.animateFrame = function() {
+  if (this.stopped) {
     return;
   }
-  $("create_account_button").disabled = true;
-  $("create_account_button").onclick = submitSignUpForm;
-  $("create_account_name").checking = false;
-  $("create_account_name").onkeyup =
-      function() { maybeCheckSignUpField("name"); };
-  $("create_account_email").onkeyup =
-      function() { maybeCheckSignUpField("email"); };
-  $("create_account_password1").onkeyup = checkSignUpForm;
-  $("create_account_password2").onkeyup = checkSignUpForm;
 
-  $("create_account_name").focus();
-
-  roundElement("create_account", null);
-
-  var node = getFirstElementByTagAndClassName("*", "step_by_step", "create_account");
-
-  if (node) {
-    roundElement(node, null);
+  if (this.frame == 0) {
+    this.frame++;
   }
+
+  var x = -this.size * (this.frame % 8);
+  var y = -this.size * Math.floor(this.frame / 8);
+
+  this.container.style.backgroundPosition = x + "px " + y + "px";
+  this.frame = (this.frame + 1) % 32;
+  callLater(this.delay, bind(this.animateFrame, this));
 }
-addLoadEvent(installSignUpForm);
+
+Throbber.prototype.stop = function() {
+  this.container.style.backgroundPosition = "top left";
+  this.stopped = true;
+}

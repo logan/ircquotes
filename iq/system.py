@@ -22,6 +22,8 @@ class Action(db.Expando):
 def record(actor, verb, *targets, **kwargs):
   if not targets:
     targets = kwargs.get('targets')
+  if not targets:
+    targets = [getSystem()]
   if targets:
     kwargs = kwargs.copy()
     kwargs['targets'] = [target.key() for target in targets]

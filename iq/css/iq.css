@@ -282,3 +282,10 @@ table.form td {
   font-size: medium;
   font-weight: bold;
 }
+
+.throbber {
+  background: url(/large/process-working.png) no-repeat top left;
+  float: left;
+  width: 32px;
+  height: 32px;
+}

@@ -30,11 +30,13 @@ class InvalidName(AccountException):
                        ' in IRC nicks.')
   MISSING_LETTER = 'An account name must contain at least one letter.'
   TOO_LONG = 'An account name may only be at most %d characters in length.'
+  IN_USE = 'This name is already in use.'
 
 
 class InvalidEmail(AccountException):
   INVALID_FORMAT = "This doesn't look like a valid email address."
   TOO_LONG = 'We only support email addresses up to %d characters long.'
+  IN_USE = 'This email is already in use.'
 
 
 class NoSuchNameException(AccountException): pass
@@ -85,6 +87,8 @@ class Account(db.Expando):
       raise InvalidName(InvalidName.MISSING_LETTER)
     if len(name) > Account.MAX_NAME_LENGTH:
       raise InvalidName(InvalidName.TOO_LONG % Account.MAX_NAME_LENGTH)
+    if Account.getByName(name):
+      raise InvalidName(InvalidName.IN_USE)
 
   def put(self):
     self.normalized_name = self.normalizeName(self.name)
@@ -102,6 +106,8 @@ class Account(db.Expando):
       raise InvalidEmail(InvalidEmail.INVALID_FORMAT)
     if len(email) > Account.MAX_EMAIL_LENGTH:
       raise InvalidEmail(InvalidEmail.TOO_LONG % Account.MAX_EMAIL_LENGTH)
+    if Account.getByEmail(email):
+      raise InvalidEmail(InvalidEmail.IN_USE)
 
   @staticmethod
   def normalizeEmail(email):

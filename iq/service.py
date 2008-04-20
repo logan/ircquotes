@@ -169,8 +169,10 @@ class LogoutService(Service):
 
 class CreateAccountService(Service):
   def checkName(self):
+    name = self.request.get('name')
+    if not name:
+      return
     try:
-      name = self.request.get('name')
       self.template.name = name
       accounts.Account.validateName(name)
       return name
@@ -178,8 +180,10 @@ class CreateAccountService(Service):
       self.template.name_error = e.message
 
   def checkEmail(self):
+    email = self.request.get('email')
+    if not email:
+      return
     try:
-      email = self.request.get('email')
       self.template.email = email
       accounts.Account.validateEmail(email)
       return email
@@ -223,6 +227,7 @@ class ActivationService(Service):
       account = accounts.Account.activate(name, activation)
       self.template.activated = True
       self.setAccount(account)
+      return account
     except accounts.AccountException, e:
       self.template.exception = e
 

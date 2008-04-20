@@ -82,11 +82,19 @@ class CreateAccountPage(service.CreateAccountService):
 class ActivationPage(service.ActivationService):
   @ui('activate.html')
   def get(self):
-    self.activate()
+    if self.activate():
+      self.redirect('/')
 
   @ui('activate.html')
   def post(self):
-    self.activate()
+    if self.activate():
+      self.redirect('/')
+
+
+class LogoutPage(service.LogoutService):
+  @ui('index.html')
+  def get(self):
+    self.logout()
 
 
 def main():
@@ -98,6 +106,7 @@ def main():
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),
     ('/submit', SubmitPage),
+    ('/logout', LogoutPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)

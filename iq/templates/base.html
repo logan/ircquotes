@@ -24,7 +24,7 @@
 {%   if account.trusted %}
         <span id="user_control">{{ account.name }} &#9662;</span>
         <div id="user_menu" style="display: none">
-          <a id="signout_button">
+          <a id="signout_button" href="/logout">
             Sign out
           </a>
         </div>
@@ -39,8 +39,6 @@
                   <input id="signin_account" tabindex="1" type="text" name="name" size="12">
                   <br>
                   <a href="/create-account">Want to create a new account?</a>
-                  <br>
-                  <a href="/lookup-account">Forgot your account?</a>
                 </td>
                 <td>
                   Password
@@ -55,7 +53,10 @@
                 </td>
               </tr>
               <tr>
-                <td id="signin_status" colspan="2">&nbsp;</td>
+                <td id="signin_status" colspan="2">
+                  <div id="signin_throbber" class="throbber">&nbsp;</div>
+                  <div id="signin_status_message"></div>
+                </td>
               </tr>
             </table>
           </div>

@@ -46,6 +46,12 @@ APP_CONFIG_TEMPLATE = {
       'expiration': '1d',
     },
     {
+      'url': r'/(small|medium|large)/(.*\.(png))',
+      'static_files': r'icons/\1/\2',
+      'upload': r'icons/(small|medium|large)/(.*\.(png))',
+      'expiration': '1d',
+    },
+    {
       'url': r'/.*',
       'script': 'ui.py',
     },
