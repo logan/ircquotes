@@ -65,7 +65,7 @@ class PageSpecifier:
       elif param.startswith('r='):
         kwargs['reversed'] = bool(int(param[2:]))
       elif param.startswith('a='):
-        kwargs['account'] = accounts.Account.getByName(param[2:])
+        kwargs['account'] = accounts.Account.getById(param[2:])
     return PageSpecifier(**kwargs)
 
   def encode(self):

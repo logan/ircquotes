@@ -113,7 +113,7 @@ class Service(webapp.RequestHandler):
     return 's%s' % hash.generate()
 
   def setAccount(self, account):
-    logging.info('Setting account for remainder of request to: %s', account.name)
+    logging.info('Setting account for remainder of request to: %s', account.id)
     self.session.account = account
     self.account = account
     self.template.account = account
@@ -147,11 +147,11 @@ class Service(webapp.RequestHandler):
 
 class LoginService(Service):
   def login(self):
-    name = self.request.get('name')
-    self.template.name = name
+    id = self.request.get('id')
+    self.template.id = id
     password = self.request.get('password')
     try:
-      account = accounts.Account.login(name, password)
+      account = accounts.Account.login(id, password)
       if account:
         self.setAccount(account)
         self.template.success = True
@@ -192,13 +192,12 @@ class CreateAccountService(Service):
 
   def createAccount(self, name, email):
     password = self.request.get('password')
-
     if name and email and password:
       try:
-        account = accounts.Account.create(name=name,
-                                          email=email,
-                                          password=password,
-                                         )
+        account = accounts.Account.createIq(name=name,
+                                            email=email,
+                                            password=password,
+                                           )
         account.setupActivation(self.mailer, self.request.application_url)
         if self.inTestingMode():
           self.template.activation = account.activation
@@ -221,10 +220,10 @@ class CreateAccountService(Service):
 class ActivationService(Service):
   def activate(self):
     self.template.activated = False
-    name = self.request.get('name')
+    id = self.request.get('id')
     activation = self.request.get('activation')
     try:
-      account = accounts.Account.activate(name, activation)
+      account = accounts.Account.activate(id, activation)
       self.template.activated = True
       self.setAccount(account)
       return account
@@ -233,9 +232,9 @@ class ActivationService(Service):
 
   def resendEmail(self):
     self.template.email_sent = False
-    name = self.request.get('name')
+    id = self.request.get('id')
     try:
-      self.template.email_sent = accounts.Account.resendActivation(name)
+      self.template.email_sent = accounts.Account.resendActivation(id)
     except accounts.AccountException, e:
       self.template.exception = e
 

@@ -86,7 +86,7 @@ function SignInForm() {
   }
 
   this.ERROR_MESSAGES = {
-    "NoSuchNameException": "Invalid account name",
+    "NoSuchAccountException": "Invalid account name",
     "InvalidPasswordException": "Invalid password",
     "NotActivatedException": "This account has not been activated",
   };
@@ -146,7 +146,7 @@ SignInForm.prototype.maybeSubmit = function() {
     this.status.innerHTML = "Logging in...";
 
     var d_result = loadJSONDoc("/json/login",
-                               {"name": this.account.value,
+                               {"id": "iq/" + this.account.value,
                                 "password": this.password.value});
 
     d_result.addCallbacks(bind(this.handleResponse, this),

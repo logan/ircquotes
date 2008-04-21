@@ -1,6 +1,6 @@
 import logging
 
-from pydispatch import dispatcher
+from louie import dispatcher
 
 from google.appengine.ext import db
 

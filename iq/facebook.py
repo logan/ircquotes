@@ -5,7 +5,7 @@ import StringIO
 import time
 import wsgiref.handlers
 
-from pydispatch import dispatcher
+from louie import dispatcher
 
 from google.appengine.api import urlfetch
 from google.appengine.ext import db
@@ -60,7 +60,7 @@ class FacebookSupport:
       self.valid = True
       logging.info('facebook_user = %r', session.facebook_user)
       dispatcher.connect(receiver=self.reportAction, sender=system.record)
-      account = accounts.Account.getByFacebookId(session.facebook_user)
+      account = accounts.Account.getById('facebook/%d' % session.facebook_user)
       if account:
         logging.info('Logging in via facebook id: %s', account.name)
         self.handler.setAccount(account)
@@ -139,10 +139,7 @@ class LinkAccountPage(service.LoginService):
     # TODO: Support different account namespaces
     logging.info('Creating facebook account for %s (%r)',
                  name, self.session.facebook_user)
-    account = accounts.Account.create(name='facebook/%s' % name,
-                                      email='facebook/%s' % self.session.facebook_user,
-                                      facebook_id=self.session.facebook_user,
-                                     )
+    account = accounts.Account.createFacebook(name, self.session.facebook_user)
     self.setAccount(account)
 
   def link(self):

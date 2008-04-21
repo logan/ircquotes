@@ -8,7 +8,7 @@ import sys
 
 IQ_DEPENDENCIES = [
   'minifb.py',
-  'pydispatch',
+  'louie',
   'simplejson',
 ]
 
