@@ -3,6 +3,7 @@ import logging
 import os
 import urllib
 
+from google.appengine.ext import db
 from google.appengine.ext import webapp
 
 import accounts
@@ -296,3 +297,43 @@ class DeleteQuoteService(QuoteService):
     if quote and self.request.get('really-do-it'):
       quote.unpublish()
       return True
+
+
+class ClearDataService(Service):
+  DEFAULT_BATCH_SIZE = 20
+  MODULES = [quotes, accounts]
+
+  def deleteChunkOfKind(self, kind, batch_size):
+    logging.info('session: %s', self.session.key())
+    query = kind.all().fetch(limit=batch_size)
+    count = 0
+    for i, entity in enumerate(query):
+      key = entity.key()
+      if key == self.account.key():
+        logging.info('Skipping deletion of active user!')
+      elif key == self.session.key():
+        logging.info("Skipping deletion of active session!")
+      else:
+        logging.info('  [%5d] Deleting %s %s',
+                     i, kind.__name__, key.id_or_name() or key)
+        entity.delete()
+        count += 1
+    return count
+
+  @classmethod
+  def getKinds(cls):
+    for module in cls.MODULES:
+      for value in module.__dict__.itervalues():
+        if isinstance(value, type) and issubclass(value, db.Model):
+          yield value
+
+  def deleteChunk(self):
+    batch_size = self.getIntParam('batch_size', self.DEFAULT_BATCH_SIZE)
+    total = self.getIntParam('total', 0)
+    for kind in self.getKinds():
+      count = self.deleteChunkOfKind(kind, batch_size)
+      if count:
+        self.template.kind = kind.__name__
+        self.template.count = count
+        return
+    self.template.done = True

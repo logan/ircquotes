@@ -34,9 +34,16 @@ class AdminPage(service.Service):
     system.record(self.account, VERB_UPDATED, sys)
 
 
+class WipePage(service.Service):
+  @admin('wipe.html')
+  def get(self):
+    pass
+
+
 def main():
   pages = [
     ('/admin', AdminPage),
+    ('/admin/wipe', WipePage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)
