@@ -18,8 +18,11 @@
 {%     if quote.draft %}
         <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit</a>
 {%     endif %}
-        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ request.url|urlencode }}">Delete Quote</a>
+        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ request.url|urlencode }}">Delete</a>
 {%   endifequal %}
+{%   if account.admin %}
+        <a href="/quote?key={{ quote.key|urlencode }}&rebuild=1">Rebuild</a>
+{%   endif %}
 {% endif %}
       </div>
     </div>
@@ -29,15 +32,15 @@
 {% for line in quote.getDialog %}
     <tr class="{% cycle row0,row1 %}">
       <td>
-{%   if line.time %}
-        {{ line.time }}
+{%   if line.params.timestamp %}
+        {{ line.params.timestamp }}
 {%   else %}
         &nbsp;
 {%   endif %}
       </td>
       <td class="actor">
-{%   if line.actor %}
-        &lt;{{ line.actor|escape }}&gt;
+{%   if line.params.nick %}
+        &lt;{{ line.params.nickflag|escape }}{{ line.params.nick|escape }}&gt;
 {%   else %}
         &nbsp;
 {%   endif %}
@@ -51,11 +54,6 @@
     <div class="quote_note">
       <span class="label">Note:</span>{{ quote.note }}
     </div>
-{% endif %}
-{% if quote.draft %}
-{%   ifequal quote.parent.key account.key %}
-    <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit Draft</a>
-{%   endifequal %}
 {% endif %}
     &nbsp;
   </div>

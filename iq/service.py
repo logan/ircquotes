@@ -286,6 +286,8 @@ class QuoteService(Service):
                                          account=self.account,
                                         )
       self.template.quote = quote
+      if self.account.admin and self.getIntParam('rebuild', 0):
+        quote.rebuild()
       return quote
     except quotes.QuoteException, e:
       self.template.exception = e
