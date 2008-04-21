@@ -1,5 +1,6 @@
 import datetime
 import logging
+import pickle
 import re
 import time
 
@@ -31,132 +32,141 @@ def onQuoteDeleted(action):
   system.incrementQuoteCount(-1)
 
 
-class Network(db.Model):
-  name = db.StringProperty(required=True)
-  canonical_name = db.StringProperty()
-  servers = db.StringListProperty()
+class Line:
+  def __init__(self, line, formatting=None):
+    self.original = line
+    if formatting is None:
+      self.formatting = list(LineFormatterRegistry.parse(line))
 
-  def put(self):
-    self.canonical_name = self.name.lower()
-    return db.Model.put(self)
-
-  @staticmethod
-  def getOrCreate(network, server):
-    server = server.lower()
-    entity = Network.all().filter('canonical_name =', network.lower()).get()
-    if entity:
-      if server not in entity.servers:
-        entity.servers.append(server)
-        entity.put()
+  def __repr__(self):
+    if len(self.original) > 20:
+      line = self.original[:17] + '...'
     else:
-      entity = Network(name=network or server, servers=[server])
-      entity.put()
-    return entity
+      line = self.original
+    return '<Line: %r formatting=%s>' % (line, self.formatting)
 
 
-class Context(db.Model):
-  protocol = db.StringProperty(required=True)
-  network = db.ReferenceProperty(Network)
-  location = db.StringProperty()
-
-  @staticmethod
-  def getIrc(network, server, channel):
-    if network or server:
-      network = Network.getOrCreate(network, server)
-    else:
-      network = None
-    query = Context.all()
-    query.filter('protocol =', 'irc')
-    query.filter('network =', network)
-    query.filter('location =', channel)
-    context = query.get()
-    if not context:
-      context = Context(protocol='irc', network=network, location=channel)
-      context.put()
-    return context
-
-
-class DialogLine(db.Model):
-  offset = db.IntegerProperty(required=True)
-  time = db.TimeProperty()
-  actor = db.StringProperty()
-  text = db.TextProperty(default='')
-
+class LineFormatterRegistry(type):
   NL = re.compile(r'\r?\n')
   INDENT = re.compile(r'^(\s*)')
-  STATEMENT = re.compile(r'^(?P<timestamp>\d?\d:\d\d(:\d\d)?)?\s*'
-                         r"(<?(?P<actor>\W*[\w\d'\[\]{}\\|-]+)\W*)?\s"
-                         r'(?P<statement>.*)'
-                        )
-  TIME = re.compile(r'(?P<hour>\d?\d):(?P<minute>\d\d)(:(?P<second>\d\d))?')
-  NICK = re.compile(r"(?P<nick>[\w\d'\[\]{}\\|-]+)")
-  WORD_SPLITTER = re.compile(r'\s+')
-  WORD_STRIPPER = re.compile(r'\W+')
 
-  MAX_SIGNATURE_WORDS = 10
-  MAX_SIGNATURE_LEN = 40
-  MIN_SIGNATURE_LEN = 10
+  registry = []
+  
+  def __new__(cls, *args, **kwargs):
+    instance = type.__new__(cls, *args, **kwargs)
+    cls.registry.append(instance)
+    return instance
 
-  @staticmethod
-  def generateLines(text):
+  @classmethod
+  def parseDialog(cls, dialog):
     line_start_indent = 0
     cur_line = []
-    for line in DialogLine.NL.split(text):
-      indent = len(DialogLine.INDENT.match(line).group(1))
+    for line in cls.NL.split(dialog):
+      indent = len(cls.INDENT.match(line).group(1))
       if indent <= line_start_indent:
         if cur_line:
-          yield ' '.join(cur_line)
+          yield Line(' '.join(cur_line))
         del cur_line[:]
         line_start_indent = indent
       cur_line.append(line.strip())
     if cur_line:
-      yield ' '.join(cur_line)
+      yield Line(' '.join(cur_line))
 
-  @staticmethod
-  def parseLine(line):
-    if not line:
-      return (None, None, line)
-    match = DialogLine.STATEMENT.match(line)
-    if not match:
-      return (None, None, line)
-    data = match.groupdict()
-    time = None
-    if data['timestamp']:
-      match = DialogLine.TIME.match(data['timestamp'])
-      if match:
-        tdata = match.groupdict(0)
-        hour = int(tdata['hour'])
-        minute = int(tdata['minute'])
-        second = int(tdata['second'])
-        if hour < 24 and minute < 60 and second < 60:
-          time = datetime.time(hour, minute, second)
-    return (time, data['actor'] or None, data['statement'])
+  @classmethod
+  def parse(cls, line):
+    for formatter in cls.registry:
+      while True:
+        match = formatter.match(line)
+        if match:
+          yield match
+          line = line[:match.range[0]] + line[match.range[1]:]
+          if not match.multiple:
+            break
+        else:
+          break
 
-  @staticmethod
-  def parse(quote):
-    for i, line in enumerate(DialogLine.generateLines(quote.dialog_source)):
-      timestamp, actor, statement = DialogLine.parseLine(line)
-      if not statement:
-        logging.error('parseLine returned empty statement: %r', line)
-        logging.info(repr(quote.dialog_source))
-      yield DialogLine(parent=quote,
-                       offset=i,
-                       time=timestamp,
-                       actor=actor,
-                       text=statement,
-                      )
+
+class LineFormatter(object):
+  """Instances of this class describe how to apply formatting to a quote.
+
+  @type multiple: bool
+  @ivar multiple: Whether the formatter could possibly match again.
+  @type range: (int, int)
+  @ivar range: A tuple giving the range of characters this formatting effect
+               applies to.  E.g., line[range[0]:range[1]].
+  @type params: A dictionary of data to export to the recipient of the formatted
+                line.
+  """
+
+  __metaclass__ = LineFormatterRegistry
+
+  def __init__(self, range=None, params=None, multiple=False):
+    self.range = range
+    self.params = params
+    self.multiple = multiple
+
+  def __repr__(self):
+    #return '%s(%r, %r)' % (self.__class__.__name__, self.range, self.params)
+    return '%s: %r' % (self.__class__.__name__, self.__dict__)
+
+  @classmethod
+  def match(cls, line):
+    return None
+
+
+class TimestampFormatter(LineFormatter):
+  TIME = re.compile(r'^\s*\[?(?P<hour>\d?\d):(?P<minute>\d\d)(:(?P<second>\d\d))?\]?\s*')
+
+  @classmethod
+  def match(cls, line):
+    match = cls.TIME.match(line)
+    if match:
+      groups = match.groupdict(0)
+      timestamp = datetime.time(int(groups['hour']), int(groups['minute']),
+                                int(groups['second']))
+      return cls(range=(match.start(), match.end()),
+                 params={'timestamp': timestamp},
+                )
+
+
+class NickFormatter(LineFormatter):
+  NICK = re.compile(r'^\s*[\[<\(]?'
+                    r'(?P<nickflag>[\s@+])?'
+                    r"(?P<nick>[\w\d`\[\]{}\\|-]+)[\]>\):]+\s*")
+  NORMALIZATION = re.compile('[^\w\d]')
+
+  @classmethod
+  def match(cls, line):
+    match = cls.NICK.match(line)
+    if match:
+      params = {
+        'normalized_nick':
+          cls.NORMALIZATION.sub('', match.group('nick')).lower(),
+      }
+      params.update(match.groupdict())
+      return cls(range=(match.start(), match.end()),
+                 params=params,
+                )
 
 
 class Quote(search.SearchableModel):
+  # The text data
+  dialog_source = db.TextProperty(required=True)
+  note = db.TextProperty()
+  formatting = db.BlobProperty()
+  labels = db.StringListProperty()
+
+  # State bits
+  deleted = db.BooleanProperty(default=False)
   draft = db.BooleanProperty(required=True, default=True)
+
+  # Timestamps
   submitted = db.DateTimeProperty(required=True, auto_now_add=True)
   modified = db.DateTimeProperty()
   built = db.DateTimeProperty(default=datetime.datetime.fromtimestamp(0))
-  context = db.ReferenceProperty(Context)
-  dialog_source = db.TextProperty(required=True)
-  note = db.TextProperty()
+
+  # Migration support
   legacy_id = db.IntegerProperty()
-  deleted = db.BooleanProperty(default=False)
 
   @staticmethod
   def createDraft(account, source,
@@ -316,21 +326,29 @@ class Quote(search.SearchableModel):
     else:
       system.record(self.parent(), VERB_UPDATED, self)
 
-  def updateDialog(self):
-    new_lines = list(DialogLine.parse(self))
-    old_lines = list(self.getDialog(sorted=False))
-    if old_lines:
-      db.delete(old_lines)
-    db.put(new_lines)
-    return new_lines
-
-  def getDialog(self, sorted=True):
-    query = DialogLine.all().ancestor(self)
-    if sorted:
-      query.order('offset')
-    return query
+  def getDialog(self):
+    lines = pickle.loads(self.formatting)
+    logging.info('lines: %s', lines)
+    for line in lines:
+      params = {}
+      text = line.original
+      for formatter in line.formatting:
+        text = text[:formatter.range[0]] + text[formatter.range[1]:]
+        params.update(formatter.params)
+      yield {'text': text, 'params': params}
 
   def rebuild(self):
+    lines = list(LineFormatterRegistry.parseDialog(self.dialog_source))
+    logging.info('formatting: %s', lines)
+    self.formatting = db.Blob(pickle.dumps(lines))
+
+    nicks = set()
+    for line in lines:
+      for formatter in line.formatting:
+        if 'normalized_nick' in formatter.params:
+          nicks.add(formatter.params['normalized_nick'])
+
+    self.labels = ['nick:%s' % nick for nick in nicks]
+    logging.info('labels: %r', self.labels)
     self.built = datetime.datetime.now()
     self.put()
-    self.updateDialog()

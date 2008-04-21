@@ -7,8 +7,9 @@ from google.appengine.ext import db
 REGISTERED_VERBS = set()
 
 def Verb(verb):
-  assert verb not in REGISTERED_VERBS
-  REGISTERED_VERBS.add(verb)
+  # XXX: Something weird happens in the GAE environment
+  #assert verb not in REGISTERED_VERBS
+  #REGISTERED_VERBS.add(verb)
   return verb
 
 

@@ -3,6 +3,9 @@
     <link rel="stylesheet" type="text/css" href="/iq.css">
     <script src="/MochiKit.js"></script>
     <script src="/iq.js"></script>
+{% if testing %}
+    <script>addLoadEvent(partial(createLoggingPane, true))</script>
+{% endif %}
     <title>IQ: {% block subtitle %}Accounting for Taste{% endblock %}</title>
   </head>
   <body>

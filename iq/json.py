@@ -116,11 +116,18 @@ class LogoutPage(service.LogoutService):
     self.logout()
 
 
+class ClearDataPage(service.ClearDataService):
+  @json(require_admin=True)
+  def get(self):
+    self.deleteChunk()
+
+
 def main():
   pages = [
     ('/json/create-account', CreateAccountPage),
     ('/json/login', LoginPage),
     ('/json/logout', LogoutPage),
+    ('/json/wipe', ClearDataPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)

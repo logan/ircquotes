@@ -1,0 +1,125 @@
+{% extends "../base.html" %}
+{% block content %}
+<script>
+function Wiper(button) {
+  this.button = button;
+  this.started = false;
+  this.current_kind = null;
+  this.current_count = 0;
+  this.total = 0;
+  this.statusElement;
+  this.throbber = new Throbber(32);
+}
+
+Wiper.prototype.start = function() {
+  this.button.disabled = true;
+  this.started = true;
+  this.throbber.start($("wipe_throbber"));
+  this.deletePending = false;
+  this.deleteChunk();
+}
+
+Wiper.prototype.stop = function() {
+  this.started = false;
+  this.throbber.stop();
+  this.button.disabled = false;
+}
+
+Wiper.prototype.deleteChunk = function() {
+  if (!this.started || this.deletePending) {
+    return;
+  }
+  log("requesting to delete a chunk");
+  this.deleteDeferred = loadJSONDoc("/json/wipe");
+  this.deleteDeferred.addCallbacks(bind(this.onDeletion, this),
+                                   bind(this.onError, this));
+}
+
+Wiper.prototype.onError = function(error) {
+  logError(error);
+  this.stop();
+  alert(error);
+}
+
+Wiper.prototype.onDeletion = function(response) {
+  try {
+    log("chunk deletion response: ", response);
+    if (response.done) {
+      this.stop();
+      alert("Wipe completed!");
+      return;
+    }
+    log("kind, count = ", response.kind, response.count);
+    if (response.kind != this.current_kind) {
+      log("new kind: ", response.kind);
+      this.startNewKind(response.kind, response.count);
+    } else {
+      log("previous kind: ", response.kind);
+      this.continueKind(response.count);
+    }
+    this.updateTotal(response.count);
+    this.deleteChunk();
+  } catch(error) {
+    logError(error);
+    alert(error);
+    this.stop();
+    return;
+  }
+}
+
+Wiper.prototype.updateTotal = function(count) {
+  this.total += count;
+  $("wipe_total").innerHTML =
+    "<div class='kind'><b>Total:</b><span class='count'>" + this.total
+    + "</span>";
+}
+
+Wiper.prototype.startNewKind = function(kind, count) {
+  this.statusDiv = DIV({"class": "kind"},
+                       createDOM("B", null, kind + ":"),
+                       SPAN({"class": "count"}, count));
+  $("wipe_log").appendChild(this.statusDiv);
+  this.current_kind = kind;
+  this.current_count = count;
+}
+
+Wiper.prototype.continueKind = function(count) {
+  var node = getFirstElementByTagAndClassName("*", "count", this.statusDiv);
+
+  this.current_count += count;
+  node.innerHTML = this.current_count;
+}
+
+function setup() {
+  var wiper = new Wiper(this);
+  $("wipe_button").onclick = bind(wiper.start, wiper);
+}
+addLoadEvent(setup);
+</script>
+<style>
+.kind, #wipe_total {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: right;
+  width: 200px;
+}
+
+.count {
+  display: inline-block;
+  width: 50px;
+}
+</style>
+<center>
+This will delete each entity from the data store, one at a time, in a process that will take hours.
+Any data deleted will be unrecoverable.  Are you sure you want to do this?
+<br>
+<input id="wipe_button" type="button" value="Yes, do it!">
+<hr>
+<div id="wipe_throbber" class="throbber">&nbsp;</div>
+<div id="wipe_total">
+</div>
+<div id="wipe_log">
+</div>
+</center>
+{% endblock %}
+
