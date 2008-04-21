@@ -122,9 +122,83 @@ class ClearDataPage(service.ClearDataService):
     self.deleteChunk()
 
 
+class MigrationPage(service.Service):
+  @json(require_admin=True)
+  def post(self):
+    self.migrate()
+
+    
+class MigrateAccountPage(MigrationPage):
+  def migrate(self):
+    user_id = self.getIntParam('user_id')
+    name = self.request.get('name')
+    email = self.request.get('email')
+    password = self.request.get('password')
+    created = datetime.datetime.utcfromtimestamp(self.getIntParam('created'))
+    rewrite = self.getIntParam('rewrite', 0)
+
+    if not rewrite and accounts.Account.getByLegacyId(user_id):
+      self.template.status = 'skipped'
+      return
+
+    if accounts.Account.getById('iq/%s' % name):
+      self.template.status = 'conflict: name'
+      return
+
+    if accounts.Account.getByEmail(email):
+      self.template.status = 'conflict: email'
+      return
+
+    account = accounts.Account.createLegacy(user_id=user_id,
+                                            name=name,
+                                            email=email,
+                                            password=password,
+                                            created=created,
+                                           )
+    account.put()
+    self.template.status = 'saved'
+    self.template.key = str(account.key())
+
+
+class MigrateQuotePage(MigrationPage):
+  def migrate(self):
+    quote_id = self.getIntParam('quote_id')
+    submitted_timestamp = self.getIntParam('submitted')
+    submitted = datetime.datetime.utcfromtimestamp(submitted_timestamp)
+    modified_timestamp = self.getIntParam('modified', 0)
+    modified = None
+    if modified_timestamp:
+      modified = datetime.datetime.utcfromtimestamp(modified_timestamp)
+    rewrite = self.getIntParam('rewrite', 0)
+
+    if not rewrite and quotes.Quote.getByLegacyId(quote_id):
+      self.template.status = 'skipped'
+      return
+
+    account = accounts.Account.getByLegacyId(self.getIntParam('user_id'))
+    if not account:
+      self.template.status = 'missing user'
+      return
+    
+    quote = quotes.Quote.createLegacy(quote_id=quote_id,
+                                      account=account,
+                                      network=self.request.get('network', None),
+                                      server=self.request.get('server', None),
+                                      channel=self.request.get('channel', None),
+                                      source=self.request.get('source'),
+                                      note=self.request.get('note', None),
+                                      modified=modified,
+                                      submitted=submitted,
+                                     )
+    self.template.status = 'saved'
+    self.template.key = str(quote.key())
+
+
 def main():
   pages = [
     ('/json/create-account', CreateAccountPage),
+    ('/json/migrate-account', MigrateAccountPage),
+    ('/json/migrate-quote', MigrateQuotePage),
     ('/json/login', LoginPage),
     ('/json/logout', LogoutPage),
     ('/json/wipe', ClearDataPage),

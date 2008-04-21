@@ -119,7 +119,21 @@ class Service(webapp.RequestHandler):
     self.account = account
     self.template.account = account
 
+  def setupApiSession(self, user_id, secret):
+    account = accounts.Account.getById('api/%s' % user_id)
+    if not account or secret != account.password:
+      self.response.set_status(403)
+      return
+    self.session = accounts.Session.temporary()
+    self.setAccount(account)
+
   def setupSession(self):
+    api_user_id = self.request.get('iq_user_id')
+    api_secret = self.request.get('iq_secret')
+    if api_user_id and api_secret:
+      self.setupApiSession(api_user_id, api_secret)
+      return
+
     # Clear out any orphan sessions
     accounts.Session.expireAll()
 

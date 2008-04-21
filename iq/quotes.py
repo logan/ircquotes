@@ -115,7 +115,7 @@ class LineFormatter(object):
 
 
 class TimestampFormatter(LineFormatter):
-  TIME = re.compile(r'^\s*\[?(?P<hour>\d?\d):(?P<minute>\d\d)(:(?P<second>\d\d))?\]?\s*')
+  TIME = re.compile(r'^\s*[\[(]?(?P<hour>\d?\d):(?P<minute>\d\d)(:(?P<second>\d\d))?[)\]]?\s*')
 
   @classmethod
   def match(cls, line):
@@ -138,7 +138,7 @@ class NickFormatter(LineFormatter):
   @classmethod
   def match(cls, line):
     match = cls.NICK.match(line)
-    if match:
+    if match and filter(lambda c: not c.isdigit(), match.group('nick')):
       params = {
         'normalized_nick':
           cls.NORMALIZATION.sub('', match.group('nick')).lower(),
@@ -155,6 +155,7 @@ class Quote(search.SearchableModel):
   note = db.TextProperty()
   formatting = db.BlobProperty()
   labels = db.StringListProperty()
+  location_labels = db.StringListProperty()
 
   # State bits
   deleted = db.BooleanProperty(default=False)
@@ -168,8 +169,8 @@ class Quote(search.SearchableModel):
   # Migration support
   legacy_id = db.IntegerProperty()
 
-  @staticmethod
-  def createDraft(account, source,
+  @classmethod
+  def createDraft(cls, account, source,
                   context=None,
                   note=None,
                   submitted=None,
@@ -179,14 +180,14 @@ class Quote(search.SearchableModel):
     kwargs = {}
     if submitted:
       kwargs['submitted'] = submitted
-    quote = Quote(parent=account,
-                  draft=True,
-                  context=context,
-                  dialog_source=source,
-                  note=note,
-                  legacy_id=legacy_id,
-                  **kwargs
-                 )
+    quote = cls(parent=account,
+                draft=True,
+                context=context,
+                dialog_source=source,
+                note=note,
+                legacy_id=legacy_id,
+                **kwargs
+               )
     quote.rebuild()
     def transaction():
       acc = accounts.Account.get(account.key())
@@ -195,50 +196,84 @@ class Quote(search.SearchableModel):
       return quote
     return db.run_in_transaction(transaction)
 
-  @staticmethod
-  def getDraft(account, key):
-    draft = Quote.getQuoteByKey(account, key)
+  @classmethod
+  def createLegacy(cls, quote_id, account, network, server, channel, source,
+                   note, modified, submitted):
+    loc_labels = []
+    def labelize(type, value):
+      value = value.strip().replace(' ', '-').replace('#', '')
+      if value:
+        loc_labels.append('%s:%s' % (type, value))
+    labelize('network', network)
+    labelize('server', server)
+    labelize('channel', channel)
+
+    quote = cls.getByLegacyId(quote_id)
+    if quote:
+      new = False
+      quote.dialog_source = source
+      quote.note = note
+      quote.submitted = submitted
+      quote.modified = modified or submitted
+    else:
+      new = True
+      quote = cls(parent=account,
+                  legacy_id=quote_id,
+                  dialog_source=source,
+                  note=note,
+                  submitted=submitted,
+                  modified=modified or submitted,
+                  draft=False,
+                 )
+    quote.rebuild()
+    if new:
+      system.record(account, VERB_PUBLISHED, quote, timestamp=submitted)
+    return quote
+
+  @classmethod
+  def getDraft(cls, account, key):
+    draft = cls.getQuoteByKey(account, key)
     if not draft or draft.deleted:
       raise InvalidKeyException
     if not draft.draft:
       raise InvalidQuoteStateException
     return draft
 
-  @staticmethod
-  def getQuoteByKey(account, key):
-    quote = Quote.get(key)
+  @classmethod
+  def getQuoteByKey(cls, account, key):
+    quote = cls.get(key)
     if not quote or quote.deleted:
       raise InvalidKeyException
     if quote.draft and account.key() != quote.parent_key():
       raise NoPermissionException
     return quote
 
-  @staticmethod
-  def getByLegacyId(legacy_id):
-    query = Quote.all()
+  @classmethod
+  def getByLegacyId(cls, legacy_id):
+    query = cls.all()
     query.filter('legacy_id =', legacy_id)
     query.filter('deleted =', False)
     return query.get()
 
-  @staticmethod
+  @classmethod
   def getPublishedQuote(key):
-    quote = Quote.get(key)
+    quote = cls.get(key)
     if quote and not quote.deleted and not quote.draft:
       return quote
 
-  @staticmethod
-  def getRecentQuotes(reversed=False, **kwargs):
-    return Quote.getQuotesByTimestamp('submitted',
-                                      descending=not reversed,
-                                      include_drafts=False,
-                                      **kwargs)
+  @classmethod
+  def getRecentQuotes(cls, reversed=False, **kwargs):
+    return cls.getQuotesByTimestamp('submitted',
+                                    descending=not reversed,
+                                    include_drafts=False,
+                                    **kwargs)
 
-  @staticmethod
-  def getQuotesByBuildTime(**kwargs):
-    return Quote.getQuotesByTimestamp('built', **kwargs)
+  @classmethod
+  def getQuotesByBuildTime(cls, **kwargs):
+    return cls.getQuotesByTimestamp('built', **kwargs)
 
-  @staticmethod
-  def getQuotesByTimestamp(property,
+  @classmethod
+  def getQuotesByTimestamp(cls, property,
                            start=None,
                            offset=0,
                            limit=10,
@@ -248,7 +283,7 @@ class Quote(search.SearchableModel):
                           ):
     logging.info('quotes by ts: property=%s, start=%s, offset=%s limit=%s, descending=%s, drafts=%s, ancestor=%s',
                  property, start, offset, limit, descending, include_drafts, ancestor)
-    query = Quote.all()
+    query = cls.all()
     if ancestor:
       query.ancestor(ancestor)
     if not include_drafts:
@@ -276,9 +311,9 @@ class Quote(search.SearchableModel):
       offset = i - 1
     return quotes, start, offset
 
-  @staticmethod
-  def getDraftQuotes(account, offset=0, limit=10, order='-submitted'):
-    query = (Quote.all()
+  @classmethod
+  def getDraftQuotes(cls, account, offset=0, limit=10, order='-submitted'):
+    query = (cls.all()
              .ancestor(account)
              .filter('draft =', True)
              .filter('deleted =', False)
@@ -286,10 +321,10 @@ class Quote(search.SearchableModel):
             )
     return list(query.fetch(offset=offset, limit=limit))
 
-  @staticmethod
-  def search(query, offset=0, limit=10):
+  @classmethod
+  def search(cls, query, offset=0, limit=10):
     logging.info('quote search: query=%r, offset=%r, limit=%r', query, offset, limit)
-    db_query = Quote.all()
+    db_query = cls.all()
     db_query.search(query)
     db_query.filter('draft =', False)
     db_query.filter('deleted =', False)

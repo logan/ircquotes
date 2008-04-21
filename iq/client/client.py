@@ -47,7 +47,12 @@ def jsonDecoder(f):
 
 
 class IqJsonClient(object):
-  def __init__(self, host, baseuri='/json', use_pickle=False):
+  def __init__(self, user_id, secret, host,
+               baseuri='/json',
+               use_pickle=False,
+              ):
+    self.user_id = user_id
+    self.secret = secret
     self.host = host
     self.baseuri = baseuri
     self.use_pickle = use_pickle
@@ -64,18 +69,19 @@ class IqJsonClient(object):
     except KeyError:
       raise NameError(name)
 
-  def call(self, method, **params):
+  def call(self, method, **kwargs):
+    params = {
+      'iq_user_id': self.user_id,
+      'iq_secret': self.secret,
+    }
+    if self.use_pickle:
+      params['__pickle'] = '1'
+    params.update(kwargs)
     method = method.replace('_', '-')
     url = '%s%s/%s' % (self.host, self.baseuri, method)
     logging.info('Calling %r', url)
-    logging.debug('  params: %r', params)
     params = urllib.urlencode(params)
-    if self.use_pickle:
-      if params:
-        params += '&'
-      params += '__pickle=1'
-    logging.debug('  query params: %s', params)
-    f = urllib.urlopen(url + '?' + params)
+    f = urllib.urlopen(url, params)
     logging.info('  processing response')
     # TODO: Error handling!
     return self.decoder(f)

@@ -193,6 +193,7 @@ class Account(db.Expando):
   @classmethod
   def createLegacy(cls, user_id, name, email, password, created):
     account = cls(id='iq/%s' % name.lower(),
+                  name=name,
                   email=email.lower(),
                   password=password,
                   created=created,
@@ -213,6 +214,18 @@ class Account(db.Expando):
                  )
     account.put()
     system.record(account, VERB_SIGNED_UP)
+    return account
+
+  @classmethod
+  def createApi(cls, name, admin=False):
+    account = cls(id='api/%s' % name,
+                  name=name,
+                  password = hash.generate(),
+                  activated=datetime.datetime.now(),
+                  trusted=True,
+                  admin=admin,
+                 )
+    account.put()
     return account
 
   def setupActivation(self, mailer, base_url):
@@ -272,31 +285,39 @@ class Session(db.Expando):
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   active = db.DateTimeProperty(required=True, auto_now=True)
 
-  @staticmethod
-  def expireAll():
+  @classmethod
+  def expireAll(cls):
     now = datetime.datetime.now()
-    expiration = now - datetime.timedelta(days=Session.LIFETIME_DAYS)
-    query = Session.all().filter("created <", expiration)
+    expiration = now - datetime.timedelta(days=cls.LIFETIME_DAYS)
+    query = cls.all().filter("created <", expiration)
     for session in query:
       session.delete()
     logging.info("Deleted sessions: %d", query.count())
 
-  @staticmethod
-  def load(session_id):
+  @classmethod
+  def load(cls, session_id):
     logging.info("Loading session: %s", session_id)
-    session = Session.get_by_key_name(session_id)
+    session = cls.get_by_key_name(session_id)
     if session is None:
       logging.info("Creating new session: %s", session_id)
-      session = Session(key_name=session_id,
-                        id=session_id,
-                        account=Account.getAnonymous(),
-                       )
+      session = cls(key_name=session_id,
+                    id=session_id,
+                    account=Account.getAnonymous(),
+                   )
       session.put()
     return session
 
-  @staticmethod
-  def deleteAllEntities():
-    query = Session.all().fetch(limit=100)
+  @classmethod
+  def deleteAllEntities(cls):
+    query = cls.all().fetch(limit=100)
     for i, session in enumerate(query):
       session.delete()
     return i == 100
+
+  @classmethod
+  def temporary(cls):
+    return cls(id='temporary')
+
+  def put(self):
+    if self.id != 'temporary':
+      db.Expando.put(self)

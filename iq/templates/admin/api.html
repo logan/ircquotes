@@ -1,0 +1,23 @@
+{% extends "../base.html" %}
+{% block content %}
+{%   if error %}
+<span class="error">{{ error|escape }}</span>
+{%   endif %}
+{%   if new_api_user %}
+<h2>New API User</h2>
+<table class="form">
+  <tr>
+    <td class="label">Name:</td>
+    <td>{{ new_api_user.name|escape }}</td>
+  </tr>
+  <tr>
+    <td class="label">Secret:</td>
+    <td>{{ new_api_user.password|escape }}</td>
+  </tr>
+  <tr>
+    <td class="label">Admin?</td>
+    <td>{{ new_api_user.admin|escape }}</td>
+  </tr>
+</table>
+{%   endif %}
+{% endblock %}

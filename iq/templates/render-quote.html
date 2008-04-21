@@ -40,7 +40,7 @@
       </td>
       <td class="actor">
 {%   if line.params.nick %}
-        &lt;{{ line.params.nickflag|escape }}{{ line.params.nick|escape }}&gt;
+        &lt;{% if line.params.nickflag %}{{ line.params.nickflag|escape }}{% endif %}{{ line.params.nick|escape }}&gt;
 {%   else %}
         &nbsp;
 {%   endif %}

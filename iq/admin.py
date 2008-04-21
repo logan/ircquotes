@@ -9,6 +9,7 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+import accounts
 import service
 import system
 import ui
@@ -40,9 +41,25 @@ class WipePage(service.Service):
     pass
 
 
+class ApiPage(service.Service):
+  @admin('api.html')
+  def post(self):
+    name = self.request.get('name')
+    if not name:
+      self.template.error = 'No name given'
+      return
+    admin = 'admin' in self.request.POST
+    id = 'api/%s' % name.strip().lower()
+    if accounts.Account.getById(id):
+      self.template.error = 'Name already in use'
+      return
+    self.template.new_api_user = accounts.Account.createApi(name, admin)
+
+
 def main():
   pages = [
     ('/admin', AdminPage),
+    ('/admin/api', ApiPage),
     ('/admin/wipe', WipePage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)

@@ -14,8 +14,7 @@ class UnsupportedBrowseModeException(BrowseException): pass
 
 
 class PageSpecifier:
-  #DEFAULT_SIZE = 10
-  DEFAULT_SIZE = 3
+  DEFAULT_SIZE = 10
   MAX_PAGE_SIZE = 20
 
   def __init__(self, mode,
@@ -79,7 +78,7 @@ class PageSpecifier:
     if self.reversed:
       params.append(('r', '1'))
     if self.account:
-      params.append(('a', self.account.name))
+      params.append(('a', self.account.id))
     return ';'.join('%s=%s' % param for param in params)
     
   @staticmethod
