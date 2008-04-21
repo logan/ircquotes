@@ -50,6 +50,7 @@ def MigrateQuotes(db, client, rewrite=False):
                                          modified=modified,
                                          submitted=submitted,
                                          rewrite=rewrite and 1 or 0,
+                                         anonymize_as_needed=1,
                                         )
     if response.status == 'saved':
       print '[Quote: %3d/%d] Saved: %s' % (i + 1, len(rows), response.key)

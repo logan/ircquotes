@@ -59,6 +59,7 @@ class LineFormatterRegistry(type):
 
   @classmethod
   def parseDialog(cls, dialog):
+    dialog = dialog.strip()
     line_start_indent = 0
     cur_line = []
     for line in cls.NL.split(dialog):

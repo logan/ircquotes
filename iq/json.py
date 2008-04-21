@@ -177,8 +177,12 @@ class MigrateQuotePage(MigrationPage):
 
     account = accounts.Account.getByLegacyId(self.getIntParam('user_id'))
     if not account:
-      self.template.status = 'missing user'
-      return
+      if self.getIntParam('anonymize_as_needed', 0):
+        account = accounts.Account.getAnonymous()
+        self.template.anonymized = True
+      else:
+        self.template.status = 'missing user'
+        return
     
     quote = quotes.Quote.createLegacy(quote_id=quote_id,
                                       account=account,
