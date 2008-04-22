@@ -161,6 +161,7 @@ class BrowseService(service.Service):
     if not query:
       self.template.quotes = []
       return [], page, page
+    self.template.search_query = query
     quote_list = quotes.Quote.search(query=query,
                                      offset=page.offset,
                                      limit=page.size,
