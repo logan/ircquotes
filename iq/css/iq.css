@@ -39,6 +39,24 @@ body {
   right: 1em;
 }
 
+#headline {
+  display: inline;
+  font-size: x-small;
+  text-align: center;
+}
+
+#headline_alpha {
+  background: #fcc;
+  color: #744;
+  font-weight: bold;
+}
+
+#headline_beta {
+  background: #f8f8f8;
+  color: black;
+  font-weight: normal;
+}
+
 .menu {
   background: #cfc;
   margin-left: -0.25em;

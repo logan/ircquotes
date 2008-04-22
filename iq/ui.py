@@ -9,6 +9,7 @@ from google.appengine.ext.webapp import template
 import browse
 import facebook
 import service
+import system
 
 def ui(path, **kwargs):
   tpath = os.path.join('templates', path)
@@ -18,6 +19,7 @@ def ui(path, **kwargs):
     def wrapper(self):
       def pre_hook():
         self.facebook = facebook.FacebookSupport(self)
+        self.template.stability_level = str(system.getSystem().stability_level)
         if self.account.trusted:
           self.template.draft_page = browse.PageSpecifier(mode='draft')
           self.template.my_page = browse.PageSpecifier(mode='recent',

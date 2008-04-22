@@ -51,6 +51,7 @@ class System(db.Expando):
   facebook_api_key = db.StringProperty()
   facebook_secret = db.StringProperty()
   owner = db.StringProperty()
+  stability_level = db.IntegerProperty(default=0)
 
 
 def getSystem():

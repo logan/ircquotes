@@ -87,6 +87,19 @@
         </div>
 {% endif %}
       </div>
+      <div id="headline">
+{% ifequal stability_level "0" %}
+        <div id="headline_alpha" class="rounded">
+          This system is in an <em>alpha</em> state.
+          Anything and everything could and probably will break.
+        </div>
+{% endifequal %}
+{% ifequal stability_level "1" %}
+        <div id="headline_beta" class="rounded">
+          This system is in a <em>beta</em> state.  There may be some bugs here and there.
+        </div>
+{% endifequal %}
+      </div>
     </div>
     <div id="content_container">
       <div id="content">
@@ -94,7 +107,7 @@
 &nbsp;
 {% endblock %}
       </div>
-      <div id="system_stats">
+      <div id="footer">
         Published quotes: {{ system.quote_count }}
         <br>
         Activated accounts: {{ system.account_count }}
