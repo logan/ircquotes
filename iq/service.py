@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import re
 import urllib
 
 from google.appengine.ext import db
@@ -263,21 +264,52 @@ class CreateDraftService(Service):
 
 
 class EditDraftService(Service):
+  LABEL_SPLITTER = re.compile(r'[\s,]')
+
   def getDraft(self):
     key = self.request.get('key')
     self.template.key = key
     try:
       self.template.quote = quotes.Quote.getDraft(self.account, key)
+      self.exportLabels()
       return self.template.quote
     except quotes.QuoteException, e:
       self.template.exception = e
 
+  def exportLabels(self):
+    if not self.template.quote:
+      return
+    # TODO: Support different label sets
+    self.template.quote_labels = {}
+    other = []
+    for label in self.template.quote.labels:
+      parts = label.split(':', 1)
+      if len(parts) == 2 and parts[0] in ['network', 'server', 'channel']:
+        if parts[0] not in self.template.quote_labels:
+          self.template.quote_labels[parts[0]] = parts[1]
+          continue
+      other.append(label)
+    self.template.quote_labels['other'] = ' '.join(other)
+    logging.info('quote_labels: %r', self.template.quote_labels)
+
   def save(self):
     draft = self.getDraft()
     if draft:
-      # TODO: Support metadata, note
+      # TODO: Support note
+      draft.clearLabels()
+      for name, value in self.request.params.iteritems():
+        if value and name.startswith('label.'):
+          logging.info('found label: %r = %r', name, value)
+          draft.addLabel('%s:%s' % (name[len('label.'):], value))
+      for label in self.LABEL_SPLITTER.split(self.request.get('labels', '')):
+        if label:
+          draft.addLabel(label)
+      logging.info('draft.labels now: %r', draft.labels)
       dialog = self.request.get('dialog')
+      logging.info('draft.labels now: %r', draft.labels)
       draft.update(dialog=dialog)
+      logging.info('draft.labels now: %r', draft.labels)
+      self.exportLabels()
       return draft
 
   def discard(self):

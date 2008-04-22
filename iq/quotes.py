@@ -383,8 +383,22 @@ class Quote(search.SearchableModel):
       for formatter in line.formatting:
         if 'normalized_nick' in formatter.params:
           nicks.add(formatter.params['normalized_nick'])
-
-    self.labels = ['nick:%s' % nick for nick in nicks]
+    for nick in nicks:
+      self.addLabel('nick:%s' % nick)
     logging.info('labels: %r', self.labels)
     self.built = datetime.datetime.now()
     self.put()
+
+  def label(self, prefix):
+    return [value for value in self.labels if value.startswith(prefix)]
+
+  def clearLabels(self):
+    del self.labels[:]
+
+  def addLabel(self, label):
+    if self.labels is None:
+      self.labels = []
+    label = label.strip().lower()
+    if label not in self.labels:
+      logging.info('adding label: %r', label)
+      self.labels.append(label)

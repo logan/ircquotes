@@ -312,3 +312,8 @@ table.form td {
   width: 32px;
   height: 32px;
 }
+
+#quote_irc_label_set {
+  font-size: smaller;
+  vertical-align: bottom;
+}

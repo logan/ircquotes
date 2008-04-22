@@ -15,6 +15,24 @@ Expected variables:
   <input type="hidden" name="key" value="{{ quote.key }}">
   <table class="form">
     <tr>
+      <td class="label">
+        IRC Labels:
+      </td>
+      <td>
+        <div id="quote_irc_label_set">
+          network:<input type="text" name="label.network" value="{{ quote_labels.network|escape }}" size="8">
+          server:<input type="text" name="label.server" value="{{ quote_labels.server|escape }}" size="8">
+          channel:<input type="text" name="label.channel" value="{{ quote_labels.channel|escape }}" size="8">
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Other labels:</td>
+      <td>
+        <input type="text" name="labels" value="{{ quote_labels.other|escape }}" size="80">
+      </td>
+    </tr>
+    <tr>
       <td class="label">Quote:</td>
       <td>
         <textarea name="dialog" rows="10" cols="80">{{quote.dialog_source|escape}}</textarea>

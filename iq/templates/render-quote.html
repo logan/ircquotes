@@ -8,7 +8,7 @@
       {{ quote.parent.name|escape }}
 {% endif %}
     </span>
-    <span class="quote_context">...</span>
+    <span class="quote_labels">Labels: {{ quote.labels|join:", " }}</span>
     <span class="quote_date">Submitted: {{ quote.submitted }}</span>
 {% if not preview %}
     <div class="nav quote_options">
