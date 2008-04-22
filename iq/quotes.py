@@ -133,7 +133,7 @@ class TimestampFormatter(LineFormatter):
 class NickFormatter(LineFormatter):
   NICK = re.compile(r'^\s*[\[<\(]?'
                     r'(?P<nickflag>[\s@+])?'
-                    r"(?P<nick>[\w\d`\[\]{}\\|-]+)[\]>\):]+\s*")
+                    r"(?P<nick>[\w\d`\[\]{}\\|-]+)[\]>\):]+\s?")
   NORMALIZATION = re.compile('[^\w\d]')
 
   @classmethod
@@ -402,3 +402,13 @@ class Quote(search.SearchableModel):
     if label not in self.labels:
       logging.info('adding label: %r', label)
       self.labels.append(label)
+
+  def formattedSubmitted(self):
+    return self.formattedTimestamp(self.submitted)
+
+  def formattedModified(self):
+    return self.formattedTimestamp(self.modified)
+
+  @staticmethod
+  def formattedTimestamp(timestamp):
+    return timestamp.strftime('%B %e, %Y, at %T %Z')

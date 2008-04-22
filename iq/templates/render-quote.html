@@ -9,7 +9,9 @@
 {% endif %}
     </span>
     <span class="quote_labels">Labels: {{ quote.labels|join:", " }}</span>
-    <span class="quote_date">Submitted: {{ quote.submitted }}</span>
+{%    if quote.modified %}
+    <span class="quote_date">Last Modified: {{ quote.formattedModified }}</span>
+{%    endif %}
 {% if not preview %}
     <div class="nav quote_options">
       <span class="quote_options_control">Options &#9662;</span>
@@ -26,7 +28,7 @@
 {% endif %}
       </div>
     </div>
-    <span class="quote_date">Last Modified: {{ quote.modified }}</span>
+    <span class="quote_date">Submitted: {{ quote.formattedSubmitted|escape }}</span>
   </div>
   <table class="quote_source" cellspacing="0">
 {% for line in quote.getDialog %}
