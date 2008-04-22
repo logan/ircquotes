@@ -169,7 +169,10 @@ class Account(db.Expando):
   @classmethod
   def login(cls, id, password):
     hashpw = hash.generate(password)
-    account = cls.getById(id)
+    if id.startswith('iq/') and '@' in id:
+      account = cls.getByEmail(id[3:])
+    else:
+      account = cls.getById(id)
     if not account or not account.trusted:
       raise NoSuchAccountException
     if account.activated is None and account.password is None:
