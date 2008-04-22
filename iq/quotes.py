@@ -33,9 +33,11 @@ def onQuoteDeleted(action):
 
 
 class Line:
-  def __init__(self, line, formatting=None):
+  def __init__(self, line, preserve_formatting=False):
     self.original = line
-    if formatting is None:
+    if preserve_formatting:
+      self.formatting = []
+    else:
       self.formatting = list(LineFormatterRegistry.parse(line))
 
   def __repr__(self):
@@ -58,7 +60,7 @@ class LineFormatterRegistry(type):
     return instance
 
   @classmethod
-  def parseDialog(cls, dialog):
+  def parseDialog(cls, dialog, preserve_formatting):
     dialog = dialog.strip()
     line_start_indent = 0
     cur_line = []
@@ -66,12 +68,14 @@ class LineFormatterRegistry(type):
       indent = len(cls.INDENT.match(line).group(1))
       if indent <= line_start_indent:
         if cur_line:
-          yield Line(' '.join(cur_line))
+          yield Line(' '.join(cur_line),
+                     preserve_formatting=preserve_formatting)
         del cur_line[:]
         line_start_indent = indent
       cur_line.append(line.strip())
     if cur_line:
-      yield Line(' '.join(cur_line))
+      yield Line(' '.join(cur_line),
+                 preserve_formatting=preserve_formatting)
 
   @classmethod
   def parse(cls, line):
@@ -153,8 +157,9 @@ class NickFormatter(LineFormatter):
 class Quote(search.SearchableModel):
   # The text data
   dialog_source = db.TextProperty(required=True)
-  note = db.TextProperty()
   formatting = db.BlobProperty()
+  preserve_formatting = db.BooleanProperty(default=False)
+  note = db.TextProperty()
   labels = db.StringListProperty()
   location_labels = db.StringListProperty()
 
@@ -351,11 +356,18 @@ class Quote(search.SearchableModel):
     system.record(self.parent(), VERB_PUBLISHED, self)
     return self
 
-  def update(self, dialog=None, publish=False, modified=None):
+  def update(self,
+             dialog=None,
+             preserve_formatting=None,
+             modified=None,
+             publish=False,
+            ):
     if not self.draft:
       raise InvalidQuoteStateException
     if dialog is not None:
       self.dialog_source = dialog
+    if preserve_formatting is not None:
+      self.preserve_formatting = preserve_formatting
     self.rebuild()
     if publish:
       self.publish(modified=modified)
@@ -363,6 +375,9 @@ class Quote(search.SearchableModel):
       system.record(self.parent(), VERB_UPDATED, self)
 
   def getDialog(self):
+    return self.getFormattedDialog()
+
+  def getFormattedDialog(self):
     lines = pickle.loads(self.formatting)
     logging.info('lines: %s', lines)
     for line in lines:
@@ -374,15 +389,18 @@ class Quote(search.SearchableModel):
       yield {'text': text, 'params': params}
 
   def rebuild(self):
-    lines = list(LineFormatterRegistry.parseDialog(self.dialog_source))
+    lines = list(LineFormatterRegistry.parseDialog(self.dialog_source,
+                                                   preserve_formatting=
+                                                     self.preserve_formatting))
     logging.info('formatting: %s', lines)
     self.formatting = db.Blob(pickle.dumps(lines))
 
     nicks = set()
     for line in lines:
-      for formatter in line.formatting:
-        if 'normalized_nick' in formatter.params:
-          nicks.add(formatter.params['normalized_nick'])
+      if line.formatting:
+        for formatter in line.formatting:
+          if 'normalized_nick' in formatter.params:
+            nicks.add(formatter.params['normalized_nick'])
     for nick in nicks:
       self.addLabel('nick:%s' % nick)
     logging.info('labels: %r', self.labels)

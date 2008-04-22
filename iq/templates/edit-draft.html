@@ -39,10 +39,18 @@ Expected variables:
       </td>
     </tr>
     <tr>
+      <td>&nbsp;</td>
+      <td>
+        <label>
+          <input type="checkbox" name="preserve_formatting" {% if quote.preserve_formatting %}checked{% endif %}>
+          Preserve formatting
+      </td>
+    </tr>
+    <tr>
       <td colspan="2">
-        <input type="submit" name="save" value="Save Draft">
-        <input type="submit" name="discard" value="Discard Draft">
-        <input type="submit" name="publish" value="Publish Changes">
+        <input type="submit" name="save" value="Save draft and preview">
+        <input type="submit" name="discard" value="Discard draft">
+        <input type="submit" name="publish" value="Publish">
       </td>
     </tr>
   </table>

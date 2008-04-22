@@ -290,7 +290,6 @@ class EditDraftService(Service):
           continue
       other.append(label)
     self.template.quote_labels['other'] = ' '.join(other)
-    logging.info('quote_labels: %r', self.template.quote_labels)
 
   def save(self):
     draft = self.getDraft()
@@ -299,16 +298,13 @@ class EditDraftService(Service):
       draft.clearLabels()
       for name, value in self.request.params.iteritems():
         if value and name.startswith('label.'):
-          logging.info('found label: %r = %r', name, value)
           draft.addLabel('%s:%s' % (name[len('label.'):], value))
       for label in self.LABEL_SPLITTER.split(self.request.get('labels', '')):
         if label:
           draft.addLabel(label)
-      logging.info('draft.labels now: %r', draft.labels)
       dialog = self.request.get('dialog')
-      logging.info('draft.labels now: %r', draft.labels)
-      draft.update(dialog=dialog)
-      logging.info('draft.labels now: %r', draft.labels)
+      preserve_formatting = self.request.get('preserve_formatting') == 'on'
+      draft.update(dialog=dialog, preserve_formatting=preserve_formatting)
       self.exportLabels()
       return draft
 
