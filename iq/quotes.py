@@ -24,7 +24,7 @@ VERB_UPDATED = system.Verb('updated')
 
 @system.capture(VERB_PUBLISHED)
 def onQuotePublished(action):
-  system.incrementQuoteCount()
+  system.incrementQuoteCount(timestamp=action.timestamp)
 
 
 @system.capture(VERB_DELETED)
@@ -402,7 +402,7 @@ class Quote(search.SearchableModel):
       account.draft_count -= 1
       account.put()
     db.run_in_transaction(transaction)
-    system.record(self.parent(), VERB_PUBLISHED, self)
+    system.record(self.parent(), VERB_PUBLISHED, self, timestamp=self.submitted)
     return self
 
   def update(self,

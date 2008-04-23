@@ -25,7 +25,8 @@ body {
   border: none;
   float: left;
   margin: 0.5em;
-  width: 175px;
+  height: 80px;
+  width: 80px;
 }
 
 #logo img {

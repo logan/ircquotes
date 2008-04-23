@@ -35,7 +35,7 @@
 {%   if quote.getLabelDict.channel %}<b>Channel:</b> <span>{{quote.getLabelDict.channel}}</span>{% endif %}
     </div>
 {% endif %}
-{% if not preview %}
+{% if not preview and account.trusted %}
     <div class="nav quote_options">
       <span class="quote_options_control">Options &#9662;</span>
       <div class="quote_options_menu menu" style="display: none">

@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from louie import dispatcher
@@ -46,6 +47,7 @@ def capture(verb):
 class System(db.Expando):
   SYSTEM_KEY_NAME = 'system'
 
+  latest_quote = db.DateTimeProperty()
   quote_count = db.IntegerProperty(default=0)
   account_count = db.IntegerProperty(default=0)
   facebook_api_key = db.StringProperty()
@@ -62,9 +64,11 @@ def getSystem():
   return system
 
 
-def incrementQuoteCount(amount=1):
+def incrementQuoteCount(amount=1, timestamp=None):
   def transaction():
     system = getSystem()
+    if timestamp:
+      system.latest_quote = timestamp
     system.quote_count += amount
     system.put()
   db.run_in_transaction(transaction)
