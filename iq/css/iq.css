@@ -89,6 +89,7 @@ body {
 }
 
 .quote_options {
+  clear: right;
   float: right;
 }
 
@@ -192,25 +193,37 @@ table.form td {
 }
 
 .quote {
+  background: #afa;
+  color: #343;
   margin-bottom: 2em;
 }
 
 .quote_header, .quote_footer {
-  background: #afa;
-  color: #343;
-  font-weight: bold;
-  font-size: small;
-  margin: 0;
+  font-size: x-small;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
 }
 
-.quote_header span {
+.quote_header div {
   display: block;
   margin-left: 0.5em;
 }
 
+.quote_timestamps {
+  float: right;
+  font-size: x-small;
+}
+
+.quote_by {
+  font-size: small;
+  font-weight: bold;
+}
+
+.quote_location span {
+  margin-right: 0.5em;
+}
+
 .quote_source {
-  border-left: 0.5em solid #afa;
-  border-right: 0.5em solid #afa;
   font-family: monospace;
   margin: 0;
   padding: 0.5em;

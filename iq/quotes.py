@@ -386,6 +386,7 @@ class Quote(search.SearchableModel):
     def transaction():
       self.draft = False
       self.modified = modified or datetime.datetime.now()
+      self.submitted = self.modified
       self.put()
       account = accounts.Account.get(self.parent_key())
       account.quote_count += 1
@@ -469,3 +470,17 @@ class Quote(search.SearchableModel):
   @staticmethod
   def formattedTimestamp(timestamp):
     return timestamp.strftime('%B %e, %Y, at %T %Z')
+
+  def getLabelDict(self):
+    # TODO: Support different label sets
+    quote_labels = {}
+    other = []
+    for label in self.labels:
+      parts = label.split(':', 1)
+      if len(parts) == 2 and parts[0] in ['network', 'server', 'channel']:
+        if parts[0] not in quote_labels:
+          quote_labels[parts[0]] = parts[1]
+          continue
+      other.append(label)
+    quote_labels['other'] = ', '.join(other)
+    return quote_labels

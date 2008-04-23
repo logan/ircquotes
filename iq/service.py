@@ -272,7 +272,22 @@ class EditService(Service):
     return draft
 
 
-class EditDraftService(Service):
+class QuoteService(Service):
+  def getQuote(self):
+    try:
+      quote = quotes.Quote.getQuoteByKey(key=self.request.get('key'),
+                                         account=self.account,
+                                        )
+      self.template.quote = quote
+      if self.account.admin and self.getIntParam('rebuild', 0):
+        quote.rebuild()
+      return quote
+    except quotes.QuoteException, e:
+      self.template.exception = e
+
+
+
+class EditDraftService(QuoteService):
   LABEL_SPLITTER = re.compile(r'[\s,]')
 
   def getDraft(self):
@@ -280,26 +295,10 @@ class EditDraftService(Service):
     self.template.key = key
     try:
       self.template.quote = quotes.Quote.getDraft(self.account, key)
-      self.exportLabels()
       return self.template.quote
     except quotes.QuoteException, e:
       logging.exception("QuoteException")
       self.template.exception = e.__class__.__name__
-
-  def exportLabels(self):
-    if not self.template.quote:
-      return
-    # TODO: Support different label sets
-    self.template.quote_labels = {}
-    other = []
-    for label in self.template.quote.labels:
-      parts = label.split(':', 1)
-      if len(parts) == 2 and parts[0] in ['network', 'server', 'channel']:
-        if parts[0] not in self.template.quote_labels:
-          self.template.quote_labels[parts[0]] = parts[1]
-          continue
-      other.append(label)
-    self.template.quote_labels['other'] = ' '.join(other)
 
   def save(self):
     draft = self.getDraft()
@@ -328,20 +327,6 @@ class EditDraftService(Service):
     if draft:
       draft.update(publish=True)
       self.redirect('/quote?key=%s' % urllib.quote(str(draft.key())))
-
-
-class QuoteService(Service):
-  def getQuote(self):
-    try:
-      quote = quotes.Quote.getQuoteByKey(key=self.request.get('key'),
-                                         account=self.account,
-                                        )
-      self.template.quote = quote
-      if self.account.admin and self.getIntParam('rebuild', 0):
-        quote.rebuild()
-      return quote
-    except quotes.QuoteException, e:
-      self.template.exception = e
 
 
 class DeleteQuoteService(QuoteService):
