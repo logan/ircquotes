@@ -341,12 +341,16 @@ class Quote(search.SearchableModel):
 
   def getProperties(self):
     return dict([(prop, getattr(self, prop, None))
-                 for prop in self.properties()])
+                 for prop in self.properties() if prop != 'clone_of'])
 
   def clone(self, target=None):
     if target is None:
       return Quote(parent=self.parent(), **self.getProperties())
     else:
+      if self.clone_of.key() != target.key():
+        raise InvalidQuoteStateException
+      if target.clone_of.key() != self.key():
+        raise InvalidQuoteStateException
       for name, value in self.getProperties().iteritems():
         setattr(target, name, value)
       return target
@@ -359,9 +363,11 @@ class Quote(search.SearchableModel):
     if self.clone_of:
       return self.clone_of
     draft = self.clone()
+    draft.clone_of = self
     draft.draft = True
     draft.put()
     self.clone_of = draft
+    self.put()
     return draft
 
   def unpublish(self):
@@ -370,23 +376,26 @@ class Quote(search.SearchableModel):
     system.record(self.parent(), VERB_DELETED, self)
 
   def republish(self, modified=None):
-    draft = self.clone_of
-    draft.clone(self)
-    draft.delete()
-    self.clone_of = None
-    self.publish(modified=modified)
+    self.publish(modified=modified, update=True)
     system.record(self.parent(), VERB_UPDATED, self)
 
-  def publish(self, modified=None):
+  def publish(self, modified=None, update=False):
+    logging.info('publish: modified=%s, update=%s', modified, update)
     if not self.draft:
       raise InvalidQuoteStateException
     if self.clone_of:
-      self.clone_of.republish(self, modified=modified)
+      self.clone_of.republish(modified=modified)
       return
     def transaction():
+      logging.info('xaction: draft=%r, clone_of=%s', self.draft, self.clone_of)
       self.draft = False
-      self.modified = modified or datetime.datetime.now()
-      self.submitted = self.modified
+      if self.clone_of:
+        self.clone_of.delete()
+        self.clone_of = None
+      if update:
+        self.modified = modified or datetime.datetime.now()
+      else:
+        self.submitted = modified or datetime.datetime.now()
       self.put()
       account = accounts.Account.get(self.parent_key())
       account.quote_count += 1
@@ -398,6 +407,7 @@ class Quote(search.SearchableModel):
 
   def update(self,
              dialog=None,
+             note=None,
              preserve_formatting=None,
              modified=None,
              publish=False,
@@ -406,6 +416,8 @@ class Quote(search.SearchableModel):
       raise InvalidQuoteStateException
     if dialog is not None:
       self.dialog_source = dialog
+    if note is not None:
+      self.note = note or None
     if preserve_formatting is not None:
       self.preserve_formatting = preserve_formatting
     self.rebuild()
@@ -419,7 +431,6 @@ class Quote(search.SearchableModel):
 
   def getFormattedDialog(self):
     lines = pickle.loads(self.formatting)
-    logging.info('lines: %s', lines)
     for line in lines:
       params = {}
       text = line.original
@@ -432,7 +443,6 @@ class Quote(search.SearchableModel):
     lines = list(LineFormatterRegistry.parseDialog(self.dialog_source,
                                                    preserve_formatting=
                                                      self.preserve_formatting))
-    logging.info('formatting: %s', lines)
     self.formatting = db.Blob(pickle.dumps(lines))
 
     nicks = set()

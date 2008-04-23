@@ -303,7 +303,6 @@ class EditDraftService(QuoteService):
   def save(self):
     draft = self.getDraft()
     if draft:
-      # TODO: Support note
       draft.clearLabels()
       for name, value in self.request.params.iteritems():
         if value and name.startswith('label.'):
@@ -311,10 +310,11 @@ class EditDraftService(QuoteService):
       for label in self.LABEL_SPLITTER.split(self.request.get('labels', '')):
         if label:
           draft.addLabel(label)
-      dialog = self.request.get('dialog')
       preserve_formatting = self.request.get('preserve_formatting') == 'on'
-      draft.update(dialog=dialog, preserve_formatting=preserve_formatting)
-      self.exportLabels()
+      draft.update(dialog=self.request.get('dialog'),
+                   note=self.request.get('note'),
+                   preserve_formatting=preserve_formatting,
+                  )
       return draft
 
   def discard(self):
@@ -325,8 +325,13 @@ class EditDraftService(QuoteService):
   def publish(self):
     draft = self.save()
     if draft:
+      clone = draft.clone_of
       draft.update(publish=True)
-      self.redirect('/quote?key=%s' % urllib.quote(str(draft.key())))
+      if clone:
+        quote = clone
+      else:
+        quote = draft
+      self.redirect('/quote?key=%s' % urllib.quote(str(quote.key())))
 
 
 class DeleteQuoteService(QuoteService):

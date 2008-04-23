@@ -71,8 +71,6 @@ class FacebookSupport:
           account.facebook_id = session.facebook_user
     else:
       self.valid = False
-      logging.info('failed to validate, args: %r', args)
-      logging.info('fsk: %r', getattr(session, 'facebook_session_key'))
     session.put()
 
   def __call__(self, method, **kwargs):

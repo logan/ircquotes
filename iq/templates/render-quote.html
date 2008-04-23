@@ -21,6 +21,12 @@
 {% else %}
       {{ quote.parent.name|escape }}
 {% endif %}
+{% if account.admin %}
+      [{{ quote.key.id }}]
+{%   if quote.clone_of %}
+      / [{{ quote.clone_of.key.id }}]
+{%   endif %}
+{% endif %}
     </div>
 {% if quote.getLabelDict.network or quote.getLabelDict.server or quote.getLabelDict.channel %}
     <div class="quote_location">

@@ -15,9 +15,7 @@ Expected variables:
   <input type="hidden" name="key" value="{{ quote.key }}">
   <table class="form">
     <tr>
-      <td class="label">
-        IRC Labels:
-      </td>
+      <td class="label">IRC Labels:</td>
       <td>
         <div id="quote_irc_label_set">
           network:<input type="text" name="label.network" value="{{ quote.getLabelDict.network|escape }}" size="8">
@@ -44,6 +42,12 @@ Expected variables:
         <label>
           <input type="checkbox" name="preserve_formatting" {% if quote.preserve_formatting %}checked{% endif %}>
           Preserve formatting
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Note</td>
+      <td>
+        <input type="text" name="note" value="{% if quote.note %}{{ quote.note|escape }}{% endif %}" size="80">
       </td>
     </tr>
     <tr>
