@@ -19,6 +19,12 @@
 {%   ifequal account.key quote.parent_key %}
 {%     if quote.draft %}
         <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit</a>
+{%     else %}
+{%       if quote.clone_of %}
+        <a href="/edit?key={{ quote.clone_of|urlencode }}">Edit</a>
+{%       else %}
+        <a href="/edit?key={{ quote.key|urlencode }}">Edit</a>
+{%       endif %}
 {%     endif %}
         <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ request.url|urlencode }}">Delete</a>
 {%   endifequal %}

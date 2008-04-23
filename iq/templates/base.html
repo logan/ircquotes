@@ -103,6 +103,9 @@
     </div>
     <div id="content_container">
       <div id="content">
+{% if exception %}
+      <div class="error">{{ exception }}</div>
+{% endif %}
 {% block content %}
 &nbsp;
 {% endblock %}

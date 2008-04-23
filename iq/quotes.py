@@ -175,6 +175,9 @@ class Quote(search.SearchableModel):
   # Migration support
   legacy_id = db.IntegerProperty()
 
+  # Editing support
+  clone_of = db.SelfReferenceProperty()
+
   @classmethod
   def createDraft(cls, account, source,
                   context=None,
@@ -336,14 +339,50 @@ class Quote(search.SearchableModel):
     db_query.filter('deleted =', False)
     return list(db_query.fetch(offset=offset, limit=limit))
 
+  def getProperties(self):
+    return dict([(prop, getattr(self, prop, None))
+                 for prop in self.properties()])
+
+  def clone(self, target=None):
+    if target is None:
+      return Quote(parent=self.parent(), **self.getProperties())
+    else:
+      for name, value in self.getProperties().iteritems():
+        setattr(target, name, value)
+      return target
+
+  def edit(self, account):
+    if self.draft:
+      raise InvalidQuoteStateException
+    if account.key() != self.parent_key():
+      raise NoPermissionException
+    if self.clone_of:
+      return self.clone_of
+    draft = self.clone()
+    draft.draft = True
+    draft.put()
+    self.clone_of = draft
+    return draft
+
   def unpublish(self):
     self.deleted = True
     self.put()
     system.record(self.parent(), VERB_DELETED, self)
 
+  def republish(self, modified=None):
+    draft = self.clone_of
+    draft.clone(self)
+    draft.delete()
+    self.clone_of = None
+    self.publish(modified=modified)
+    system.record(self.parent(), VERB_UPDATED, self)
+
   def publish(self, modified=None):
     if not self.draft:
       raise InvalidQuoteStateException
+    if self.clone_of:
+      self.clone_of.republish(self, modified=modified)
+      return
     def transaction():
       self.draft = False
       self.modified = modified or datetime.datetime.now()

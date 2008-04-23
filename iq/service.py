@@ -263,6 +263,15 @@ class CreateDraftService(Service):
       return self.template.quote
 
 
+class EditService(Service):
+  def edit(self):
+    quote = quotes.Quote.getQuoteByKey(key=self.request.get('key'),
+                                       account=self.account,
+                                      )
+    draft = quote.edit(self.account)
+    return draft
+
+
 class EditDraftService(Service):
   LABEL_SPLITTER = re.compile(r'[\s,]')
 
@@ -274,7 +283,8 @@ class EditDraftService(Service):
       self.exportLabels()
       return self.template.quote
     except quotes.QuoteException, e:
-      self.template.exception = e
+      logging.exception("QuoteException")
+      self.template.exception = e.__class__.__name__
 
   def exportLabels(self):
     if not self.template.quote:

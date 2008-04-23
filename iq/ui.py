@@ -80,6 +80,13 @@ class SubmitPage(service.CreateDraftService):
       self.redirect('/edit-draft?key=%s' % urllib.quote(str(draft.key())))
 
 
+class EditPage(service.EditService):
+  @ui('quote.html', require_trusted=True)
+  def get(self):
+    draft = self.edit()
+    self.redirect('/edit-draft?key=%s' % urllib.quote(str(draft.key())))
+
+
 class EditDraftPage(service.EditDraftService):
   @ui('edit-draft.html', require_trusted=True)
   def get(self):
@@ -141,6 +148,7 @@ def main():
     ('/browse', BrowsePage),
     ('/create-account', CreateAccountPage),
     ('/delete', DeleteQuotePage),
+    ('/edit', EditPage),
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),
     ('/search', SearchPage),
