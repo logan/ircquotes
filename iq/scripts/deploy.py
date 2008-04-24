@@ -90,11 +90,6 @@ def Property(name):
 
 
 INDEX_CONFIG = IndexSet(
-    Kind('DialogLine',
-         Index(ancestor=True),
-         Index(Property('offset'), ancestor=True),
-    ),
-
     Kind('Quote',
          Index(Property('__searchable_text_index'),
                Property('deleted'),
