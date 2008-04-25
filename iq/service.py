@@ -4,6 +4,7 @@ import os
 import re
 import urllib
 
+from google.appengine.api import users
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 
@@ -161,11 +162,17 @@ class Service(webapp.RequestHandler):
     self.session = accounts.Session.load(session_id)
     self.account = self.session.account
 
+    if not self.account.trusted:
+      user = users.get_current_user()
+      if user:
+        self.setAccount(accounts.Account.getByGoogleAccount(user))
+
   def setupTemplate(self):
     self.template.session = self.session
     self.template.account = self.account
     self.template.request = self.request
     self.template.system = system.getSystem()
+    self.template.google_signin = users.create_login_url(self.request.path)
 
 
 class LoginService(Service):
@@ -186,8 +193,12 @@ class LoginService(Service):
 
 class LogoutService(Service):
   def logout(self):
+    id = self.account.id
     self.setAccount(accounts.Account.getAnonymous())
-    self.redirect(self.request.get('url', '/'))
+    if id.startswith('google/'):
+      self.redirect(users.create_logout_url('/'))
+    else:
+      self.redirect(self.request.get('url', '/'))
 
 
 class CreateAccountService(Service):

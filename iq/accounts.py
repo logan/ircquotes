@@ -161,6 +161,13 @@ class Account(db.Expando):
     return cls.all().filter('email =', email).get()
 
   @classmethod
+  def getByGoogleAccount(cls, user):
+    account = cls.getById('google/%s' % user.nickname())
+    if not account:
+      account = cls.createGoogleAccount(user)
+    return account
+
+  @classmethod
   def getAnonymous(cls):
     account = cls.getById('iq/anonymous')
     if account is None:
@@ -231,6 +238,17 @@ class Account(db.Expando):
   def createFacebook(cls, facebook_id, name):
     account = cls(id='facebook/%s' % facebook_id,
                   name=name,
+                  activated=datetime.datetime.now(),
+                  trusted=True,
+                 )
+    account.put()
+    system.record(account, VERB_SIGNED_UP)
+    return account
+
+  @classmethod
+  def createGoogleAccount(cls, user):
+    account = cls(id='google/%s' % user.nickname(),
+                  name=user.nickname(),
                   activated=datetime.datetime.now(),
                   trusted=True,
                  )
