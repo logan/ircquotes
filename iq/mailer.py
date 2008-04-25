@@ -18,7 +18,7 @@ class TestingModeMailer(AbstractMailer):
 
 class ProductionModeMailer(AbstractMailer):
   def send(self, account, subject, body):
-    mail.send_mail(sender='IrcQuotes Adminstration <help@ircquotes.com>',
+    mail.send_mail(sender='IrcQuotes Adminstration <logan@ircquotes.com>',
                    to=account.email,
                    subject=subject,
                    body=body,
