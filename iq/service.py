@@ -269,7 +269,10 @@ class ResetPasswordService(Service):
       return
     if not id.startswith('iq/') and '@' not in id:
       id = 'iq/%s' % id
-    account = accounts.Account.getById(id)
+    if id.startswith('iq/'):
+      account = accounts.Account.getById(id)
+    else:
+      account = accounts.Account.getByEmail(id)
     if not account:
       self.template.error = 'Account does not exist'
       return False
