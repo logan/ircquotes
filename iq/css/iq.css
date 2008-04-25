@@ -20,6 +20,11 @@ body {
   color: #8b4;
 }
 
+#footer {
+  font-size: x-small;
+  text-align: center;
+}
+
 #logo {
   background: white;
   border: none;

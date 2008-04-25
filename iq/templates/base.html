@@ -111,9 +111,15 @@
 {% endblock %}
       </div>
       <div id="footer">
-        Published quotes: {{ system.quote_count }}
+{% block footer %}
+        Did you find a bug, or do you have an idea for a feature?
+        Submit it to our <a href="http://code.google.com/p/ircquotes/issues">issue tracker</a>!
         <br>
-        Activated accounts: {{ system.account_count }}
+        If you have more general comments, suggestions, or questions, please email
+        <a href="mailto:help@ircquotes.com">help@ircquotes.com</a>.
+        <br>
+        Server software: {% include "RELEASE" %}
+{% endblock %}
       </div>
     </div>
   </body>
