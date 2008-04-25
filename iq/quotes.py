@@ -258,6 +258,17 @@ class Quote(search.SearchableModel):
     return quote
 
   @classmethod
+  def getQuoteByShortId(cls, account, id, parent):
+    logging.info('getting by id: %r, %r', parent, id)
+    quote = cls.get_by_id(id, parent)
+    logging.info('quote = %r', quote)
+    if not quote or quote.deleted:
+      raise InvalidKeyException
+    if quote.draft and account.key() != quote.parent_key():
+      raise NoPermissionException
+    return quote
+
+  @classmethod
   def getByLegacyId(cls, legacy_id):
     query = cls.all()
     query.filter('legacy_id =', legacy_id)

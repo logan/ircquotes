@@ -89,6 +89,7 @@
       <span class="label">Note:</span>{{ quote.note }}
     </div>
 {% endif %}
-    &nbsp;
+    Link to this quote:
+    <a href="/{{ quote.parent_key.id }}/{{ quote.key.id }}">{{ request.application_url|escape }}/{{ quote.parent_key.id }}/{{ quote.key.id }}</a>
   </div>
 </div>

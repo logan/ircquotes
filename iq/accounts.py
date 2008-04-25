@@ -147,6 +147,10 @@ class Account(db.Expando):
     return query.get()
 
   @classmethod
+  def getByShortId(cls, id):
+    return cls.get_by_id(id)
+
+  @classmethod
   def getByLegacyId(cls, legacy_id):
     return cls.all().filter('legacy_id =', legacy_id).get()
 

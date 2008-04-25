@@ -1,13 +1,16 @@
 import logging
 import os
+import re
 import urllib
 import wsgiref.handlers
 
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+import accounts
 import browse
 import facebook
+import quotes
 import service
 import system
 
@@ -39,9 +42,22 @@ class IndexPage(browse.BrowseService):
 
 
 class QuotePage(service.QuoteService):
+  PATH_PATTERN = re.compile(r'^/(?P<account>\d+)/(?P<quote>\d+)$')
+
   @ui('quote.html')
   def get(self):
-    quote = self.getQuote()
+    match = self.PATH_PATTERN.match(self.request.path)
+    if match:
+      account_id = int(match.group('account'))
+      quote_id = int(match.group('quote'))
+      account = accounts.Account.getByShortId(account_id)
+      quote = quotes.Quote.getQuoteByShortId(id=quote_id,
+                                             parent=account,
+                                             account=self.account,
+                                            )
+      self.template.quote = quote
+    else:
+      quote = self.getQuote()
     if quote:
       quote.owner_page = browse.PageSpecifier(mode='recent',
                                               account=quote.parent())
@@ -167,6 +183,7 @@ def main():
     ('/search', SearchPage),
     ('/submit', SubmitPage),
     ('/logout', LogoutPage),
+    (r'/\d+/\d+', QuotePage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)
