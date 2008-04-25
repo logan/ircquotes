@@ -262,6 +262,43 @@ class ActivationService(Service):
       self.template.exception = e
 
 
+class ResetPasswordService(Service):
+  def reset(self):
+    id = self.request.get('id')
+    if not id:
+      return
+    if not id.startswith('iq/') and '@' not in id:
+      id = 'iq/%s' % id
+    account = accounts.Account.getById(id)
+    if not account:
+      self.template.error = 'Account does not exist'
+      return False
+    activation = self.request.get('activation')
+    if activation:
+      if account.activation != activation:
+        self.template.error = 'Invalid activation code'
+        return False
+      self.template.id = id
+      self.template.activation = activation
+      p1 = self.request.get('password1')
+      p2 = self.request.get('password2')
+      if p1 or p2:
+        if p1 != p2:
+          self.template.error = 'Passwords did not match'
+          return False
+        else:
+          logging.info('setting new password and logging in')
+          account.setPassword(p1)
+          account.put()
+          self.setAccount(account)
+          return True
+      return False
+    logging.info('sending email')
+    self.template.email_sent = True
+    account.requestPasswordReset(self.mailer, self.request.application_url)
+    return False
+
+
 class CreateDraftService(Service):
   def createDraft(self):
     dialog = self.request.get('dialog').strip()

@@ -20,6 +20,21 @@ Thank you for registering!
 IrcQuotes Administration'''
 
 
+PASSWORD_EMAIL_TEMPLATE = '''Dear %(name)s,
+
+We are sending you this email because you or someone else has requested that
+the password of your IrcQuotes account be reset.  If you do want to reset your
+password, please visit the URL below:
+
+%(base_url)s/reset-password?id=%(id)s&activation=%(activation)s
+
+Your IrcQuotes account is still secure if you did not request this email.  If
+you have questions or concerns, please reply to this email.
+
+Thank you,
+IrcQuotes Administration'''
+
+
 class AccountException(Exception):
   pass
 
@@ -241,8 +256,22 @@ class Account(db.Expando):
 
   def sendConfirmationEmail(self, mailer, base_url):
     mailer.send(account=self,
-                subject='IrcQuotes Account Activation',
+                subject='IrcQuotes account activation',
                 body=ACTIVATION_EMAIL_TEMPLATE % {
+                  'id': self.id,
+                  'name': self.name,
+                  'activation': self.activation,
+                  'base_url': base_url,
+                })
+
+  def requestPasswordReset(self, mailer, base_url):
+    if not self.trusted:
+      return self.setupActivation(mailer, base_url)
+    self.activation = hash.generate()
+    self.put()
+    mailer.send(account=self,
+                subject='IrcQuotes password reset',
+                body=PASSWORD_EMAIL_TEMPLATE % {
                   'id': self.id,
                   'name': self.name,
                   'activation': self.activation,

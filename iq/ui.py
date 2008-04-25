@@ -136,6 +136,17 @@ class ActivationPage(service.ActivationService):
       self.redirect('/')
 
 
+class ResetPasswordPage(service.ResetPasswordService):
+  @ui('reset-password.html')
+  def get(self):
+    self.reset()
+
+  @ui('reset-password.html')
+  def post(self):
+    if self.reset():
+      self.redirect('/')
+
+
 class LogoutPage(service.LogoutService):
   @ui('index.html')
   def get(self):
@@ -152,6 +163,7 @@ def main():
     ('/edit', EditPage),
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),
+    ('/reset-password', ResetPasswordPage),
     ('/search', SearchPage),
     ('/submit', SubmitPage),
     ('/logout', LogoutPage),
