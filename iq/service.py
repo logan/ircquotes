@@ -36,6 +36,7 @@ class Service(webapp.RequestHandler):
   def __init__(self, *args, **kwargs):
     webapp.RequestHandler.__init__(self, *args, **kwargs)
     self.variables = {}
+    self.status = 200
 
   def _getParam(self, name, args, kwargs, parser=str):
     default_provided = True
@@ -89,10 +90,16 @@ class Service(webapp.RequestHandler):
       self.mailer = mailer.ProductionModeMailer()
     self.setupSession()
     self.setupTemplate()
+    logging.info('require_trusted=%r, account.trusted=%r',
+                 require_trusted, self.account.trusted)
+    logging.info('require_admin=%r, account.admin=%r',
+                 require_admin, self.account.admin)
     if require_trusted and not self.account.trusted:
-      self.response.set_status(403)
+      self.status = 403
+      return
     if require_admin and not self.account.admin:
-      self.response.set_status(403)
+      self.status = 403
+      return
     if pre_hook:
       pre_hook()
     impl(self)
@@ -123,7 +130,7 @@ class Service(webapp.RequestHandler):
   def setupApiSession(self, user_id, secret):
     account = accounts.Account.getById('api/%s' % user_id)
     if not account or secret != account.password:
-      self.response.set_status(403)
+      self.status = 403
       return
     self.session = accounts.Session.temporary()
     self.setAccount(account)

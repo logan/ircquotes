@@ -26,7 +26,8 @@ def ui(path, **kwargs):
                                                        account=self.account)
       tmpl = service.Template()
       f(self, template=tmpl, pre_hook=pre_hook)
-      self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
+      if self.status == 200:
+        self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
     return wrapper
   return decorator
 
@@ -45,7 +46,7 @@ class QuotePage(service.QuoteService):
       quote.owner_page = browse.PageSpecifier(mode='recent',
                                               account=quote.parent())
     else:
-      self.response.set_status(404)
+      self.status = 404
 
 
 class BrowsePage(browse.BrowseService):
