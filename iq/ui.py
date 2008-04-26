@@ -42,7 +42,7 @@ class IndexPage(browse.BrowseService):
 
 
 class QuotePage(service.QuoteService):
-  PATH_PATTERN = re.compile(r'^/(?P<account>\d+)/(?P<quote>\d+)$')
+  PATH_PATTERN = re.compile(r'^/q/(?P<account>\d+)/(?P<quote>\d+)$')
 
   @ui('quote.html')
   def get(self):
@@ -183,7 +183,7 @@ def main():
     ('/search', SearchPage),
     ('/submit', SubmitPage),
     ('/logout', LogoutPage),
-    (r'/\d+/\d+', QuotePage),
+    (r'/q/\d+/\d+', QuotePage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)
