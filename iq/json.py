@@ -100,19 +100,19 @@ def serializePickle(obj, f):
 
 class CreateAccountPage(service.CreateAccountService):
   @json()
-  def get(self):
+  def post(self):
     self.maybeCreateAccount()
 
 
 class LoginPage(service.LoginService):
   @json()
-  def get(self):
+  def post(self):
     self.login()
 
 
 class LogoutPage(service.LogoutService):
   @json()
-  def get(self):
+  def post(self):
     self.logout()
 
 
