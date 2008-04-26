@@ -164,7 +164,6 @@ class Quote(search.SearchableModel):
   location_labels = db.StringListProperty()
 
   # State bits
-  deleted = db.BooleanProperty(default=False)
   draft = db.BooleanProperty(required=True, default=True)
 
   # Timestamps
@@ -242,7 +241,7 @@ class Quote(search.SearchableModel):
   @classmethod
   def getDraft(cls, account, key):
     draft = cls.getQuoteByKey(account, key)
-    if not draft or draft.deleted:
+    if not draft:
       raise InvalidKeyException
     if not draft.draft:
       raise InvalidQuoteStateException
@@ -251,7 +250,7 @@ class Quote(search.SearchableModel):
   @classmethod
   def getQuoteByKey(cls, account, key):
     quote = cls.get(key)
-    if not quote or quote.deleted:
+    if not quote:
       raise InvalidKeyException
     if quote.draft and account.key() != quote.parent_key():
       raise NoPermissionException
@@ -262,7 +261,7 @@ class Quote(search.SearchableModel):
     logging.info('getting by id: %r, %r', parent, id)
     quote = cls.get_by_id(id, parent)
     logging.info('quote = %r', quote)
-    if not quote or quote.deleted:
+    if not quote:
       raise InvalidKeyException
     if quote.draft and account.key() != quote.parent_key():
       raise NoPermissionException
@@ -270,15 +269,12 @@ class Quote(search.SearchableModel):
 
   @classmethod
   def getByLegacyId(cls, legacy_id):
-    query = cls.all()
-    query.filter('legacy_id =', legacy_id)
-    query.filter('deleted =', False)
-    return query.get()
+    return cls.all().filter('legacy_id =', legacy_id).get()
 
   @classmethod
   def getPublishedQuote(key):
     quote = cls.get(key)
-    if quote and not quote.deleted and not quote.draft:
+    if quote and not quote.draft:
       return quote
 
   @classmethod
@@ -308,7 +304,6 @@ class Quote(search.SearchableModel):
       query.ancestor(ancestor)
     if not include_drafts:
       query.filter('draft =', False)
-    query.filter('deleted =', False)
     op = '>='
     if descending:
       op = '<='
@@ -336,7 +331,6 @@ class Quote(search.SearchableModel):
     query = (cls.all()
              .ancestor(account)
              .filter('draft =', True)
-             .filter('deleted =', False)
              .order(order)
             )
     return list(query.fetch(offset=offset, limit=limit))
@@ -347,7 +341,6 @@ class Quote(search.SearchableModel):
     db_query = cls.all()
     db_query.search(query)
     db_query.filter('draft =', False)
-    db_query.filter('deleted =', False)
     return list(db_query.fetch(offset=offset, limit=limit))
 
   def getProperties(self):
@@ -382,9 +375,8 @@ class Quote(search.SearchableModel):
     return draft
 
   def unpublish(self):
-    self.deleted = True
-    self.put()
     system.record(self.parent(), VERB_DELETED, self)
+    self.delete()
 
   def republish(self, modified=None):
     self.publish(modified=modified, update=True)

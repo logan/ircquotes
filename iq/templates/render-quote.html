@@ -49,7 +49,7 @@
         <a href="/edit?key={{ quote.key|urlencode }}">Edit</a>
 {%       endif %}
 {%     endif %}
-        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ request.url|urlencode }}">Delete</a>
+        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ delete_return_url|urlencode }}">Delete</a>
 {%   endifequal %}
 {%   if account.admin %}
         <a href="/quote?key={{ quote.key|urlencode }}&rebuild=1">Rebuild</a>

@@ -393,10 +393,17 @@ class EditDraftService(QuoteService):
 
 
 class DeleteQuoteService(QuoteService):
+  def getQuote(self):
+    if self.request.get('deleted'):
+      return None
+    return QuoteService.getQuote(self)
+
   def delete(self):
     quote = self.getQuote()
     if quote and self.request.get('really-do-it'):
       quote.unpublish()
+      self.template.quote = None
+      self.template.deleted = True
       return True
 
 

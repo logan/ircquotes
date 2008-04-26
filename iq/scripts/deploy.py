@@ -92,50 +92,36 @@ def Property(name):
 INDEX_CONFIG = IndexSet(
     Kind('Quote',
          Index(Property('__searchable_text_index'),
-               Property('deleted'),
                Property('draft'),
               ),
 
-         Index(Property('deleted'),
+         Index(Property('-submitted')),
+
+         Index(Property('draft'),
                Property('submitted'),
               ),
 
-         Index(Property('deleted'),
+         Index(Property('draft'),
                Property('-submitted'),
               ),
 
-         Index(Property('deleted'),
-               Property('draft'),
-               Property('submitted'),
-              ),
-
-         Index(Property('deleted'),
-               Property('draft'),
-               Property('-submitted'),
-              ),
-
-         Index(Property('deleted'),
-               Property('submitted'),
+         Index(Property('submitted'),
                ancestor=True,
               ),
 
-         Index(Property('deleted'),
-               Property('-submitted'),
+         Index(Property('-submitted'),
                ancestor=True,
               ),
 
-         Index(Property('deleted'),
-               Property('draft'),
+         Index(Property('draft'),
                Property('submitted'),
                ancestor=True,
               ),
 
-         Index(Property('deleted'),
-               Property('draft'),
+         Index(Property('draft'),
                Property('-submitted'),
                ancestor=True,
               ),
-
         ),
 )
 

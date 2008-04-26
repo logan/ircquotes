@@ -24,6 +24,7 @@ def ui(path, **kwargs):
         self.facebook = facebook.FacebookSupport(self)
         self.template.stability_level = str(system.getSystem().stability_level)
         if self.account.trusted:
+          self.template.delete_return_url = self.request.url
           self.template.draft_page = browse.PageSpecifier(mode='draft')
           self.template.my_page = browse.PageSpecifier(mode='recent',
                                                        account=self.account)
@@ -46,6 +47,7 @@ class QuotePage(service.QuoteService):
 
   @ui('quote.html')
   def get(self):
+    self.template.delete_return_url = ''
     match = self.PATH_PATTERN.match(self.request.path)
     if match:
       account_id = int(match.group('account'))
@@ -131,7 +133,9 @@ class DeleteQuotePage(service.DeleteQuoteService):
   @ui('delete.html')
   def post(self):
     if self.delete():
-      self.redirect(self.request.get('return_url', '/'))
+      return_url = self.request.get('return_url')
+      if return_url:
+        self.redirect(return_url)
 
 
 class CreateAccountPage(service.CreateAccountService):
