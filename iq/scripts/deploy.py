@@ -33,6 +33,10 @@ APP_CONFIG_TEMPLATE = {
       'script': 'facebook.py',
     },
     {
+      'url': r'/feed.*',
+      'script': 'feed.py',
+    },
+    {
       'url': r'/json.*',
       'script': 'json.py',
     },
@@ -115,6 +119,13 @@ INDEX_CONFIG = IndexSet(
                Property('state'),
                Property('-submitted'),
                ancestor=True,
+              ),
+        ),
+
+    Kind('Action',
+         Index(
+               Property('verb'),
+               Property('-timestamp'),
               ),
         ),
 )

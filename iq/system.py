@@ -20,6 +20,13 @@ class Action(db.Expando):
   actor = db.ReferenceProperty()
   targets = db.ListProperty(db.Key)
 
+  @classmethod
+  def getRecentByVerb(cls, verb, offset=0, limit=50):
+    query = cls.gql('WHERE verb = :verb ORDER BY timestamp DESC',
+                    verb=verb,
+                   )
+    return query.fetch(offset=offset, limit=limit)
+
 
 def record(actor, verb, *targets, **kwargs):
   if not targets:
