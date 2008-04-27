@@ -88,7 +88,7 @@
       </td>
       <td class="actor">
 {%   if line.params.nick %}
-        &lt;{% if line.params.nickflag %}{{ line.params.nickflag|escape }}{% endif %}{{ line.params.nick|escape }}&gt;
+        &lt;{% if line.params.nickflag %}{{ line.params.nickflag|escape }}{% endif %}<a href="/browse?page=m=label&l=nick:{{ line.params.nick.lower|urlencode }}">{{ line.params.nick|escape }}</a>&gt;
 {%   else %}
         &nbsp;
 {%   endif %}
