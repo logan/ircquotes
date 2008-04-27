@@ -125,14 +125,12 @@ INDEX_CONFIG = IndexSet(
                Property('labels'),
                Property('state'),
                Property('submitted'),
-               ancestor=True,
               ),
 
          Index(
                Property('labels'),
                Property('state'),
                Property('-submitted'),
-               ancestor=True,
               ),
         ),
 
