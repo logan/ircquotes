@@ -52,7 +52,7 @@ class Tag(object):
       return (value.replace('&', '&amp;')
                    .replace('<', '&lt;')
                    .replace('>', '&gt;')
-                   .replace('"', '&quot;'))
+                   .replace('"', '&quot;')).encode('utf-8')
     indent = ' ' * depth * 2
     out.write(indent)
     out.write('<%s' % self._name)
