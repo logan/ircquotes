@@ -1,3 +1,23 @@
+function iqCall(url, params) {
+  var qs = queryString(params);
+  var options = {
+    /*
+    "headers": {
+      //"Content-length": "" + qs.length,
+      "Content-type": "application/x-www-formurlencoded"
+    },
+    "method": "POST",
+    "mimeType": "application/x-www-formurlencoded",
+    "sendContent": qs
+    */
+    "method": "GET",
+    "queryString": params
+  };
+  var deferred = doXHR(url, options);
+
+  return deferred.addCallback(evalJSONRequest);
+}
+
 function roundNavTitleCorners(nav) {
   var options = {
     "corners": "bl br"
@@ -86,7 +106,7 @@ function SignInForm() {
   }
 
   this.ERROR_MESSAGES = {
-    "NoSuchNameException": "Invalid account name",
+    "NoSuchAccountException": "Invalid account name",
     "InvalidPasswordException": "Invalid password",
     "NotActivatedException": "This account has not been activated",
   };
@@ -119,7 +139,13 @@ SignInForm.prototype.handleResponse = function(response) {
     slideUp($("user_menu"), {"duration": 0.5});
     window.location.reload();
   } else {
-    this.displayError(this.ERROR_MESSAGES[response.exception]);
+    var msg = this.ERROR_MESSAGES[response.exception];
+
+    if (!msg) {
+      log("No string defined for exception type: ", response.exception);
+      msg = response.exception;
+    }
+    this.displayError(msg);
   }
 }
 
@@ -145,9 +171,10 @@ SignInForm.prototype.maybeSubmit = function() {
     this.throbber.start($("signin_throbber"));
     this.status.innerHTML = "Logging in...";
 
-    var d_result = loadJSONDoc("/json/login",
-                               {"name": this.account.value,
-                                "password": this.password.value});
+    log("Logging in with id=iq/", this.account.value);
+    var d_result = iqCall("/json/login",
+                          {"id": "iq/" + this.account.value,
+                           "password": this.password.value});
 
     d_result.addCallbacks(bind(this.handleResponse, this),
                           bind(this.handleError, this));
@@ -270,7 +297,7 @@ SignUpForm.prototype.checkField = function(field) {
 
   params[field] = node.value;
 
-  var d_result = loadJSONDoc("/json/create-account", params);
+  var d_result = iqCall("/json/create-account", params);
 
   this["checking_" + field] = d_result;
   d_result.addCallbacks(bind(partial(this.handleCheckFieldResponse, field),
@@ -374,7 +401,7 @@ SignUpForm.prototype.submit = function() {
     "email": this.email.value,
     "password": this.password1.value
   };
-  var d_response = loadJSONDoc("/json/create-account", params);
+  var d_response = iqCall("/json/create-account", params);
 
   d_response.addCallbacks(bind(this.handleSubmitResponse, this),
                           bind(this.handleError, this));

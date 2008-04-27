@@ -14,9 +14,24 @@ ACTIVATION_EMAIL_TEMPLATE = '''Dear %(name)s,
 Welcome to IrcQuotes!  Before you can log into the site, you will need to
 activate your account.  Simply visit the URL below to activate your account:
 
-%(base_url)s/activate?name=%(name)s&activation=%(activation)s
+%(base_url)s/activate?id=%(id)s&activation=%(activation)s
 
 Thank you for registering!
+IrcQuotes Administration'''
+
+
+PASSWORD_EMAIL_TEMPLATE = '''Dear %(name)s,
+
+We are sending you this email because you or someone else has requested that
+the password of your IrcQuotes account be reset.  If you do want to reset your
+password, please visit the URL below:
+
+%(base_url)s/reset-password?id=%(id)s&activation=%(activation)s
+
+Your IrcQuotes account is still secure if you did not request this email.  If
+you have questions or concerns, please reply to this email.
+
+Thank you,
 IrcQuotes Administration'''
 
 
@@ -39,7 +54,7 @@ class InvalidEmail(AccountException):
   IN_USE = 'This email is already in use.'
 
 
-class NoSuchNameException(AccountException): pass
+class NoSuchAccountException(AccountException): pass
 class InvalidPasswordException(AccountException): pass
 class NotActivatedException(AccountException): pass
 class InvalidAccountStateException(AccountException): pass
@@ -54,22 +69,42 @@ def onAccountActivated(action):
 
 
 class Account(db.Expando):
-  name = db.StringProperty(required=True)
-  normalized_name = db.StringProperty()
-  email = db.EmailProperty(required=True)
-  normalized_email = db.StringProperty()
-  created = db.DateTimeProperty(required=True, auto_now_add=True)
+  # Unique identifier for this account
+  #   Examples:
+  #     iq/logan
+  #     facebook/1234567
+  id = db.StringProperty(required=True)
+
+  # Another unique identifier, but not every account necessarily has one.
+  # All stored emails should be lowercased before storage.
+  email = db.EmailProperty()
+
+  # For ids in the iq namespace, this is required to log in.
   password = db.StringProperty()
-  activation = db.StringProperty()
-  activation_url = db.StringProperty()
+
+  # Access control
+  trusted = db.BooleanProperty(default=False)
+  admin = db.BooleanProperty(default=False)
+
+  # Publicly displayed name for the account.  Details from the id may also
+  # be displayed (such as the fact that the user comes from Facebook).
+  name = db.StringProperty(required=True)
+
+  # Timestamps
+  created = db.DateTimeProperty(required=True, auto_now_add=True)
   activated = db.DateTimeProperty()
   active = db.DateTimeProperty(required=True, auto_now=True)
+
+  # Account activation support
+  activation = db.StringProperty()
+  activation_url = db.StringProperty()
+
+  # Migration support
   legacy_id = db.IntegerProperty()
-  trusted = db.BooleanProperty(default=True)
+
+  # Counters
   quote_count = db.IntegerProperty(default=0)
   draft_count = db.IntegerProperty(default=0)
-  facebook_id = db.IntegerProperty()
-  admin = db.BooleanProperty(default=False)
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
@@ -78,79 +113,74 @@ class Account(db.Expando):
   MAX_EMAIL_LENGTH = 32
   EMAIL_PATTERN = re.compile(r'.+@.+\...+')
 
-  @staticmethod
-  def validateName(name):
-    name = name.strip()
-    if Account.NAME_INVALID_CHARACTER_PATTERN.search(name):
-      raise InvalidName(InvalidName.INVALID_CHARACTER)
-    if Account.NAME_LETTER_PATTERN.search(name) is None:
-      raise InvalidName(InvalidName.MISSING_LETTER)
-    if len(name) > Account.MAX_NAME_LENGTH:
-      raise InvalidName(InvalidName.TOO_LONG % Account.MAX_NAME_LENGTH)
-    if Account.getByName(name):
-      raise InvalidName(InvalidName.IN_USE)
-
   def put(self):
-    self.normalized_name = self.normalizeName(self.name)
-    self.normalized_email = self.normalizeEmail(self.email)
+    self.id = self.id.lower()
+    if self.email:
+      self.email = self.email.lower()
     return db.Model.put(self)
 
-  @staticmethod
-  def normalizeName(name):
-    return name.lower()
+  @classmethod
+  def validateName(cls, name):
+    name = name.strip()
+    if cls.NAME_INVALID_CHARACTER_PATTERN.search(name):
+      raise InvalidName(InvalidName.INVALID_CHARACTER)
+    if cls.NAME_LETTER_PATTERN.search(name) is None:
+      raise InvalidName(InvalidName.MISSING_LETTER)
+    if len(name) > cls.MAX_NAME_LENGTH:
+      raise InvalidName(InvalidName.TOO_LONG % cls.MAX_NAME_LENGTH)
+    if cls.getById('iq/%s' % name):
+      raise InvalidName(InvalidName.IN_USE)
 
-  @staticmethod
-  def validateEmail(email):
+  @classmethod
+  def validateEmail(cls, email):
     email = email.strip()
-    if Account.EMAIL_PATTERN.match(email) is None:
+    if cls.EMAIL_PATTERN.match(email) is None:
       raise InvalidEmail(InvalidEmail.INVALID_FORMAT)
-    if len(email) > Account.MAX_EMAIL_LENGTH:
-      raise InvalidEmail(InvalidEmail.TOO_LONG % Account.MAX_EMAIL_LENGTH)
-    if Account.getByEmail(email):
+    if len(email) > cls.MAX_EMAIL_LENGTH:
+      raise InvalidEmail(InvalidEmail.TOO_LONG % cls.MAX_EMAIL_LENGTH)
+    if cls.getByEmail(email):
       raise InvalidEmail(InvalidEmail.IN_USE)
 
-  @staticmethod
-  def normalizeEmail(email):
-    return email.lower()
-
-  @staticmethod
-  def getByName(name):
-    name = Account.normalizeName(name)
-    query = Account.all().filter('normalized_name =', name)
+  @classmethod
+  def getById(cls, id):
+    query = cls.all().filter('id =', id.lower())
     return query.get()
 
-  @staticmethod
-  def getByLegacyId(legacy_id):
-    return Account.all().filter('legacy_id =', legacy_id).get()
+  @classmethod
+  def getByShortId(cls, id):
+    return cls.get_by_id(id)
 
-  @staticmethod
-  def getByFacebookId(legacy_id):
-    return Account.all().filter('facebook_id =', legacy_id).get()
+  @classmethod
+  def getByLegacyId(cls, legacy_id):
+    return cls.all().filter('legacy_id =', legacy_id).get()
 
-  @staticmethod
-  def getByEmail(email):
-    email = Account.normalizeEmail(email)
+  @classmethod
+  def getByEmail(cls, email):
+    email = email.strip().lower()
     logging.info("Looking up account by email: %r", email)
-    return Account.all().filter('normalized_email =', email).get()
+    return cls.all().filter('email =', email).get()
 
-  @staticmethod
-  def getAnonymous():
-    account = Account.all().filter('trusted =', False).get()
+  @classmethod
+  def getByGoogleAccount(cls, user):
+    account = cls.getById('google/%s' % user.nickname())
+    if not account:
+      account = cls.createGoogleAccount(user)
+    return account
+
+  @classmethod
+  def getAnonymous(cls):
+    account = cls.getById('iq/anonymous')
     if account is None:
-      account = Account(name='Anonymous',
-                        email='anonymous@ircquotes.com',
-                        activated=datetime.datetime.now(),
-                        trusted=False,
-                       )
+      account = cls(id='iq/anonymous', name='Anonymous')
       account.put()
     return account
 
-  @staticmethod
-  def activate(name, activation):
-    logging.info('Attempting to activate %r', name)
-    account = Account.getByName(name)
+  @classmethod
+  def activate(cls, id, activation):
+    logging.info('Attempting to activate %r', id)
+    account = cls.getById(id)
     if not account:
-      raise NoSuchNameException
+      raise NoSuchAccountException
     if not account.activation:
       raise InvalidAccountStateException
     if account.activation != activation:
@@ -162,62 +192,117 @@ class Account(db.Expando):
     system.record(account, VERB_SIGNED_UP)
     return account
 
-  @staticmethod
-  def login(name, password):
+  @classmethod
+  def login(cls, id, password):
     hashpw = hash.generate(password)
-    account = Account.getByName(name)
+    if id.startswith('iq/') and '@' in id:
+      logging.info('getting by email: %r', id[3:])
+      account = cls.getByEmail(id[3:])
+    else:
+      logging.info('getting by id: %r', id)
+      account = cls.getById(id)
     if not account or not account.trusted:
-      raise NoSuchNameException
+      raise NoSuchAccountException
     if account.activated is None and account.password is None:
       raise NotActivatedException
     if account.password != password and account.password != hashpw:
       raise InvalidPasswordException
     return account
 
-  @staticmethod
-  def create(name, email, password=None, legacy_id=None, created=None,
-             facebook_id=None):
+  @classmethod
+  def createIq(cls, name, email, password):
     name = name.strip()
-    email = email.strip()
-    logging.info("Creating account: name=%r, email=%r", name, email)
-    kwargs = {}
-    if created is not None:
-      kwargs['created'] = created
-    if legacy_id or facebook_id:
-      kwargs['activated'] = datetime.datetime.now()
-    account = Account(name=name,
-                      email=email,
-                      password=password,
-                      legacy_id=legacy_id,
-                      facebook_id=facebook_id,
-                      **kwargs)
+    account = cls(id='iq/%s' % name.lower(),
+                  name=name,
+                  email=email.strip().lower(),
+                  password=password,
+                 )
+
     account.put()
-    if account.activated:
-      system.incrementAccountCount()
+    return account
+
+  @classmethod
+  def createLegacy(cls, user_id, name, email, password, created):
+    account = cls(id='iq/%s' % name.lower(),
+                  name=name,
+                  email=email.lower(),
+                  password=password,
+                  created=created,
+                  activated=datetime.datetime.now(),
+                  legacy_id=user_id,
+                  trusted=True,
+                 )
+    account.put()
+    system.incrementAccountCount()
+    return account
+
+  @classmethod
+  def createFacebook(cls, facebook_id, name):
+    account = cls(id='facebook/%s' % facebook_id,
+                  name=name,
+                  activated=datetime.datetime.now(),
+                  trusted=True,
+                 )
+    account.put()
+    system.record(account, VERB_SIGNED_UP)
+    return account
+
+  @classmethod
+  def createGoogleAccount(cls, user):
+    account = cls(id='google/%s' % user.nickname(),
+                  name=user.nickname(),
+                  activated=datetime.datetime.now(),
+                  trusted=True,
+                 )
+    account.put()
+    system.record(account, VERB_SIGNED_UP)
+    return account
+
+  @classmethod
+  def createApi(cls, name, admin=False):
+    account = cls(id='api/%s' % name,
+                  name=name,
+                  password = hash.generate(),
+                  activated=datetime.datetime.now(),
+                  trusted=True,
+                  admin=admin,
+                 )
+    account.put()
     return account
 
   def setupActivation(self, mailer, base_url):
     if not self.activation:
       self.activation = hash.generate()
       self.put()
-      logging.info("Activating account: name=%r, email=%r, activation=%r",
-                   self.name, self.email, self.activation)
+      logging.info("Activating account: id=%r, email=%r, activation=%r",
+                   self.id, self.email, self.activation)
       self.sendConfirmationEmail(mailer, base_url)
 
   def sendConfirmationEmail(self, mailer, base_url):
     mailer.send(account=self,
-                subject='IrcQuotes Account Activation',
+                subject='IrcQuotes account activation',
                 body=ACTIVATION_EMAIL_TEMPLATE % {
+                  'id': self.id,
+                  'name': self.name,
+                  'activation': self.activation,
+                  'base_url': base_url,
+                })
+
+  def requestPasswordReset(self, mailer, base_url):
+    if not self.trusted:
+      return self.setupActivation(mailer, base_url)
+    self.activation = hash.generate()
+    self.put()
+    mailer.send(account=self,
+                subject='IrcQuotes password reset',
+                body=PASSWORD_EMAIL_TEMPLATE % {
+                  'id': self.id,
                   'name': self.name,
                   'activation': self.activation,
                   'base_url': base_url,
                 })
 
   def setPassword(self, password):
-    logging.info('setting password')
-    if self.password is None:
-      logging.info('new account, incrementing counter')
-      system.incrementAccountCount()
     self.password = hash.generate(password)
     self.activation = None
     self.put()
@@ -227,7 +312,6 @@ class Account(db.Expando):
       return True
     if not self.trusted:
       return False
-    logging.info('Checking if system owner has been set...')
     sys = system.getSystem()
     if sys.owner:
       return False
@@ -244,8 +328,9 @@ class Account(db.Expando):
       tags.append('untrusted')
     if self.admin:
       tags.append('admin')
-    return '<Account: %r%s>' % (self.name,
-                                tags and (' %s' % ', '.join(tags)) or '')
+    return '<Account: %r%s %r>' % (self.id,
+                                   tags and (' %s' % ', '.join(tags)) or '',
+                                   self.name)
 
 
 class Session(db.Expando):
@@ -256,31 +341,39 @@ class Session(db.Expando):
   created = db.DateTimeProperty(required=True, auto_now_add=True)
   active = db.DateTimeProperty(required=True, auto_now=True)
 
-  @staticmethod
-  def expireAll():
+  @classmethod
+  def expireAll(cls):
     now = datetime.datetime.now()
-    expiration = now - datetime.timedelta(days=Session.LIFETIME_DAYS)
-    query = Session.all().filter("created <", expiration)
+    expiration = now - datetime.timedelta(days=cls.LIFETIME_DAYS)
+    query = cls.all().filter("created <", expiration)
     for session in query:
       session.delete()
     logging.info("Deleted sessions: %d", query.count())
 
-  @staticmethod
-  def load(session_id):
+  @classmethod
+  def load(cls, session_id):
     logging.info("Loading session: %s", session_id)
-    session = Session.get_by_key_name(session_id)
+    session = cls.get_by_key_name(session_id)
     if session is None:
       logging.info("Creating new session: %s", session_id)
-      session = Session(key_name=session_id,
-                        id=session_id,
-                        account=Account.getAnonymous(),
-                       )
+      session = cls(key_name=session_id,
+                    id=session_id,
+                    account=Account.getAnonymous(),
+                   )
       session.put()
     return session
 
-  @staticmethod
-  def deleteAllEntities():
-    query = Session.all().fetch(limit=100)
+  @classmethod
+  def deleteAllEntities(cls):
+    query = cls.all().fetch(limit=100)
     for i, session in enumerate(query):
       session.delete()
     return i == 100
+
+  @classmethod
+  def temporary(cls):
+    return cls(id='temporary')
+
+  def put(self):
+    if self.id != 'temporary':
+      db.Expando.put(self)

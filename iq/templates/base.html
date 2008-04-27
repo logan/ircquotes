@@ -3,13 +3,16 @@
     <link rel="stylesheet" type="text/css" href="/iq.css">
     <script src="/MochiKit.js"></script>
     <script src="/iq.js"></script>
+{% if testing %}
+    <script>addLoadEvent(partial(createLoggingPane, true));</script>
+{% endif %}
     <title>IQ: {% block subtitle %}Accounting for Taste{% endblock %}</title>
   </head>
   <body>
     <div id="header" class="roundtop">
       <div id="logo">
         <a href="/">
-          <img src="http://ircquotes.com/static/image/ircquoteslogo.png">
+          <img src="/large/iq.png">
         </a>
       </div>
       <div id="search">
@@ -31,7 +34,7 @@
 {%   else %}
         <span id="user_control">Sign In &#9662;</span>
         <div id="user_menu" style="display: none">
-          <div id="signin_form" method="POST" action="/login">
+          <div id="signin_form">
             <table>
               <tr>
                 <td>
@@ -56,6 +59,11 @@
                 <td id="signin_status" colspan="2">
                   <div id="signin_throbber" class="throbber">&nbsp;</div>
                   <div id="signin_status_message"></div>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <a style="font-size: medium" href="{{ google_signin }}">Sign in with a Google account</a>
                 </td>
               </tr>
             </table>
@@ -84,17 +92,41 @@
         </div>
 {% endif %}
       </div>
+      <div id="headline">
+{% ifequal stability_level "0" %}
+        <div id="headline_alpha" class="rounded">
+          This system is in an <em>alpha</em> state.
+          Anything and everything could and probably will break.
+        </div>
+{% endifequal %}
+{% ifequal stability_level "1" %}
+        <div id="headline_beta" class="rounded">
+          This system is in a <em>beta</em> state.  There may be some bugs here and there.
+        </div>
+{% endifequal %}
+      </div>
     </div>
     <div id="content_container">
       <div id="content">
+{% if exception %}
+      <div class="error">{{ exception }}</div>
+{% endif %}
 {% block content %}
 &nbsp;
 {% endblock %}
       </div>
-      <div id="system_stats">
-        Published quotes: {{ system.quote_count }}
+      <div id="footer">
+{% block footer %}
+        Join our IRC channel!  #ircquotes at irc.endernet.org.
         <br>
-        Activated accounts: {{ system.account_count }}
+        Did you find a bug, or do you have an idea for a feature?
+        Submit it to our <a href="http://code.google.com/p/ircquotes/issues">issue tracker</a>!
+        <br>
+        If you have more general comments, suggestions, or questions, please email
+        <a href="mailto:help@ircquotes.com">help@ircquotes.com</a>.
+        <br>
+        Server software: {% include "RELEASE" %}
+{% endblock %}
       </div>
     </div>
   </body>

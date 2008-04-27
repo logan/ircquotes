@@ -1,14 +1,18 @@
 import logging
 import os
+import re
 import urllib
 import wsgiref.handlers
 
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
+import accounts
 import browse
 import facebook
+import quotes
 import service
+import system
 
 def ui(path, **kwargs):
   tpath = os.path.join('templates', path)
@@ -18,13 +22,16 @@ def ui(path, **kwargs):
     def wrapper(self):
       def pre_hook():
         self.facebook = facebook.FacebookSupport(self)
+        self.template.stability_level = str(system.getSystem().stability_level)
         if self.account.trusted:
+          self.template.delete_return_url = self.request.url
           self.template.draft_page = browse.PageSpecifier(mode='draft')
           self.template.my_page = browse.PageSpecifier(mode='recent',
                                                        account=self.account)
       tmpl = service.Template()
       f(self, template=tmpl, pre_hook=pre_hook)
-      self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
+      if self.status == 200:
+        self.response.out.write(template.render(tpath, tmpl.__dict__, debug=True))
     return wrapper
   return decorator
 
@@ -36,14 +43,28 @@ class IndexPage(browse.BrowseService):
 
 
 class QuotePage(service.QuoteService):
+  PATH_PATTERN = re.compile(r'^/q/(?P<account>\d+)/(?P<quote>\d+)$')
+
   @ui('quote.html')
   def get(self):
-    quote = self.getQuote()
+    self.template.delete_return_url = ''
+    match = self.PATH_PATTERN.match(self.request.path)
+    if match:
+      account_id = int(match.group('account'))
+      quote_id = int(match.group('quote'))
+      account = accounts.Account.getByShortId(account_id)
+      quote = quotes.Quote.getQuoteByShortId(id=quote_id,
+                                             parent=account,
+                                             account=self.account,
+                                            )
+      self.template.quote = quote
+    else:
+      quote = self.getQuote()
     if quote:
       quote.owner_page = browse.PageSpecifier(mode='recent',
                                               account=quote.parent())
     else:
-      self.response.set_status(404)
+      self.status = 404
 
 
 class BrowsePage(browse.BrowseService):
@@ -78,6 +99,13 @@ class SubmitPage(service.CreateDraftService):
       self.redirect('/edit-draft?key=%s' % urllib.quote(str(draft.key())))
 
 
+class EditPage(service.EditService):
+  @ui('quote.html', require_trusted=True)
+  def get(self):
+    draft = self.edit()
+    self.redirect('/edit-draft?key=%s' % urllib.quote(str(draft.key())))
+
+
 class EditDraftPage(service.EditDraftService):
   @ui('edit-draft.html', require_trusted=True)
   def get(self):
@@ -105,7 +133,9 @@ class DeleteQuotePage(service.DeleteQuoteService):
   @ui('delete.html')
   def post(self):
     if self.delete():
-      self.redirect(self.request.get('return_url', '/'))
+      return_url = self.request.get('return_url')
+      if return_url:
+        self.redirect(return_url)
 
 
 class CreateAccountPage(service.CreateAccountService):
@@ -126,6 +156,17 @@ class ActivationPage(service.ActivationService):
       self.redirect('/')
 
 
+class ResetPasswordPage(service.ResetPasswordService):
+  @ui('reset-password.html')
+  def get(self):
+    self.reset()
+
+  @ui('reset-password.html')
+  def post(self):
+    if self.reset():
+      self.redirect('/')
+
+
 class LogoutPage(service.LogoutService):
   @ui('index.html')
   def get(self):
@@ -139,11 +180,14 @@ def main():
     ('/browse', BrowsePage),
     ('/create-account', CreateAccountPage),
     ('/delete', DeleteQuotePage),
+    ('/edit', EditPage),
     ('/edit-draft', EditDraftPage),
     ('/quote', QuotePage),
+    ('/reset-password', ResetPasswordPage),
     ('/search', SearchPage),
     ('/submit', SubmitPage),
     ('/logout', LogoutPage),
+    (r'/q/\d+/\d+', QuotePage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)
   wsgiref.handlers.CGIHandler().run(application)

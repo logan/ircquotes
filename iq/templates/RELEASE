@@ -1,0 +1,1 @@
+IQv2.0.1{% ifequal stability_level "0" %}&alpha;{% endifequal %}{% ifequal stability_level "1" %}&beta;{% endifequal %}{% ifequal stability_level "2" %}&gamma;{% endifequal %}

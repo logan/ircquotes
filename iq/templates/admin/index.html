@@ -1,10 +1,23 @@
-{% extends "../base.html" %}
+{% extends "base.html" %}
 {% block content %}
-<div id="admin_form" class="rounded">
+<h2>Admin Menu</h2>
+<ul>
+  <li><a href="#setup">Setup</a>
+  <li><a href="#api">API Access</a>
+</ul>
+<hr>
+<h2><a name="setup" href="#setup">Setup</a></h2>
+<div class="admin_form rounded">
   <form method="POST" action="/admin">
     <table class="form">
       <tr class="section">
         <td colspan="2">Basic Configuration</th>
+      </tr>
+      <tr>
+        <td class="label">Stability level</td>
+        <td>
+          <input type="text" name="stability_level" value="{{ system.stability_level|escape }}">
+        </td>
       </tr>
       <tr>
         <td class="label">Owner</td>
@@ -30,6 +43,30 @@
       <tr>
         <td colspan="2" class="control">
           <input type="submit" value="Save">
+        </td>
+      </tr>
+    </table>
+  </form>
+</div>
+<hr>
+<h2><a name="api" href="#api">API Access</a></h2>
+<div class="admin_form rounded">
+  <form method="POST" action="/admin/api">
+    <table class="form">
+      <tr>
+        <td class="label">Name</td>
+        <td>
+          <input type="text" name="name">
+          <br>
+          <label>
+            <input type="checkbox" name="admin">
+            Give this API user admin rights
+          </label>
+        </td>
+      </tr>
+      <tr>
+        <td colspan="2" class="control">
+          <input type="submit" value="Add API User">
         </td>
       </tr>
     </table>

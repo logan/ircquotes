@@ -20,12 +20,18 @@ body {
   color: #8b4;
 }
 
+#footer {
+  font-size: x-small;
+  text-align: center;
+}
+
 #logo {
   background: white;
   border: none;
   float: left;
   margin: 0.5em;
-  width: 175px;
+  height: 80px;
+  width: 80px;
 }
 
 #logo img {
@@ -37,6 +43,24 @@ body {
   position: absolute;
   top: 2em;
   right: 1em;
+}
+
+#headline {
+  display: inline;
+  font-size: x-small;
+  text-align: center;
+}
+
+#headline_alpha {
+  background: #fcc;
+  color: #744;
+  font-weight: bold;
+}
+
+#headline_beta {
+  background: #f8f8f8;
+  color: black;
+  font-weight: normal;
 }
 
 .menu {
@@ -71,6 +95,7 @@ body {
 }
 
 .quote_options {
+  clear: right;
   float: right;
 }
 
@@ -174,25 +199,37 @@ table.form td {
 }
 
 .quote {
+  background: #afa;
+  color: #343;
   margin-bottom: 2em;
 }
 
 .quote_header, .quote_footer {
-  background: #afa;
-  color: #343;
-  font-weight: bold;
-  font-size: small;
-  margin: 0;
+  font-size: x-small;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
 }
 
-.quote_header span {
+.quote_header div {
   display: block;
   margin-left: 0.5em;
 }
 
+.quote_timestamps {
+  float: right;
+  font-size: x-small;
+}
+
+.quote_by {
+  font-size: small;
+  font-weight: bold;
+}
+
+.quote_location span {
+  margin-right: 0.5em;
+}
+
 .quote_source {
-  border-left: 0.5em solid #afa;
-  border-right: 0.5em solid #afa;
   font-family: monospace;
   margin: 0;
   padding: 0.5em;
@@ -293,4 +330,9 @@ table.form td {
   float: left;
   width: 32px;
   height: 32px;
+}
+
+#quote_irc_label_set {
+  font-size: smaller;
+  vertical-align: bottom;
 }

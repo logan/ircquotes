@@ -15,16 +15,46 @@ Expected variables:
   <input type="hidden" name="key" value="{{ quote.key }}">
   <table class="form">
     <tr>
+      <td class="label">IRC Labels:</td>
+      <td>
+        <div id="quote_irc_label_set">
+          network:<input type="text" name="label.network" value="{{ quote.getLabelDict.network|escape }}" size="8">
+          server:<input type="text" name="label.server" value="{{ quote.getLabelDict.server|escape }}" size="8">
+          channel:<input type="text" name="label.channel" value="{{ quote.getLabelDict.channel|escape }}" size="8">
+        </div>
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Other labels:</td>
+      <td>
+        <input type="text" name="labels" value="{{ quote.getLabelDict.other|escape }}" size="80">
+      </td>
+    </tr>
+    <tr>
       <td class="label">Quote:</td>
       <td>
         <textarea name="dialog" rows="10" cols="80">{{quote.dialog_source|escape}}</textarea>
       </td>
     </tr>
     <tr>
+      <td>&nbsp;</td>
+      <td>
+        <label>
+          <input type="checkbox" name="preserve_formatting" {% if quote.preserve_formatting %}checked{% endif %}>
+          Preserve formatting
+      </td>
+    </tr>
+    <tr>
+      <td class="label">Note</td>
+      <td>
+        <input type="text" name="note" value="{% if quote.note %}{{ quote.note|escape }}{% endif %}" size="80">
+      </td>
+    </tr>
+    <tr>
       <td colspan="2">
-        <input type="submit" name="save" value="Save Draft">
-        <input type="submit" name="discard" value="Discard Draft">
-        <input type="submit" name="publish" value="Publish Changes">
+        <input type="submit" name="save" value="Save draft and preview">
+        <input type="submit" name="discard" value="Discard draft">
+        <input type="submit" name="publish" value="Publish">
       </td>
     </tr>
   </table>

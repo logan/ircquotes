@@ -14,7 +14,7 @@ Congratuations, {{ account.name }}, your account has been activated!
 Welcome, {{ account.name }}!  Your email address is now confirmed.  All you need to do is set a password!
 
 <form method="POST" action="/activate">
-  <input type="hidden" name="name" value="{{ account.name }}">
+  <input type="hidden" name="id" value="{{ account.id }}">
   <input type="hidden" name="activation" value="{{ account.activation }}">
   <table class="form">
     <tr>
@@ -41,7 +41,7 @@ Welcome, {{ account.name }}!  Your email address is now confirmed.  All you need
 {% else %}
 {%   if account.activation %}
 An activation code has been sent to {{ account.email }}.
-<a href="/activate?name={{ account.name|urlencode }}&send_email=1">Resend email</a>.
+<a href="/activate?id={{ account.id|urlencode }}&send_email=1">Resend email</a>.
 {%     if email_sent %}
 <p>
 <span class="success">Email sent!</span>

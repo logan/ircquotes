@@ -1,14 +1,16 @@
+import datetime
 import logging
 
-from pydispatch import dispatcher
+from louie import dispatcher
 
 from google.appengine.ext import db
 
 REGISTERED_VERBS = set()
 
 def Verb(verb):
-  assert verb not in REGISTERED_VERBS
-  REGISTERED_VERBS.add(verb)
+  # XXX: Something weird happens in the GAE environment
+  #assert verb not in REGISTERED_VERBS
+  #REGISTERED_VERBS.add(verb)
   return verb
 
 
@@ -45,11 +47,13 @@ def capture(verb):
 class System(db.Expando):
   SYSTEM_KEY_NAME = 'system'
 
+  latest_quote = db.DateTimeProperty()
   quote_count = db.IntegerProperty(default=0)
   account_count = db.IntegerProperty(default=0)
   facebook_api_key = db.StringProperty()
   facebook_secret = db.StringProperty()
   owner = db.StringProperty()
+  stability_level = db.IntegerProperty(default=0)
 
 
 def getSystem():
@@ -60,9 +64,11 @@ def getSystem():
   return system
 
 
-def incrementQuoteCount(amount=1):
+def incrementQuoteCount(amount=1, timestamp=None):
   def transaction():
     system = getSystem()
+    if timestamp:
+      system.latest_quote = timestamp
     system.quote_count += amount
     system.put()
   db.run_in_transaction(transaction)

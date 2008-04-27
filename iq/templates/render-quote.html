@@ -1,43 +1,80 @@
-<div class="quote">
-  <div class="quote_header roundtop">
-    <span class="quote_by">
+<div class="quote round">
+  <div class="quote_header">
+    <table class="quote_timestamps form">
+      <tr>
+        <td class="label">Submitted:</td>
+        <td>{{ quote.formattedSubmitted|escape }}</td>
+      </tr>
+{% if quote.modified %}
+{%   ifnotequal quote.submitted quote.modified %}
+      <tr>
+        <td class="label">Modified:</td>
+        <td>{{ quote.formattedModified|escape }}</td>
+      </tr>
+{%   endifnotequal %}
+{% endif %}
+    </table>
+    <div class="quote_by">
       Quote by
 {% if quote.owner_page %}
       <a href="/browse?page={{ quote.owner_page.encode|urlencode }}">{{ quote.parent.name|escape }}</a>
 {% else %}
       {{ quote.parent.name|escape }}
 {% endif %}
-    </span>
-    <span class="quote_context">...</span>
-    <span class="quote_date">Submitted: {{ quote.submitted }}</span>
-{% if not preview %}
+{% if account.admin %}
+      [{{ quote.key.id }}]
+{%   if quote.clone_of %}
+      / [{{ quote.clone_of.key.id }}]
+{%   endif %}
+{% endif %}
+    </div>
+{% if quote.getLabelDict.network or quote.getLabelDict.server or quote.getLabelDict.channel %}
+    <div class="quote_location">
+{%   if quote.getLabelDict.network %}<b>Network:</b> <span>{{quote.getLabelDict.network}}</span>{% endif %}
+{%   if quote.getLabelDict.server %}<b>Server:</b> <span>{{quote.getLabelDict.server}}</span>{% endif %}
+{%   if quote.getLabelDict.channel %}<b>Channel:</b> <span>{{quote.getLabelDict.channel}}</span>{% endif %}
+    </div>
+{% endif %}
+{% if not preview and account.trusted %}
     <div class="nav quote_options">
       <span class="quote_options_control">Options &#9662;</span>
       <div class="quote_options_menu menu" style="display: none">
 {%   ifequal account.key quote.parent_key %}
 {%     if quote.draft %}
         <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit</a>
+{%     else %}
+{%       if quote.clone_of %}
+        <a href="/edit?key={{ quote.clone_of|urlencode }}">Edit</a>
+{%       else %}
+        <a href="/edit?key={{ quote.key|urlencode }}">Edit</a>
+{%       endif %}
 {%     endif %}
-        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ request.url|urlencode }}">Delete Quote</a>
+        <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ delete_return_url|urlencode }}">Delete</a>
 {%   endifequal %}
-{% endif %}
+{%   if account.admin %}
+        <a href="/quote?key={{ quote.key|urlencode }}&rebuild=1">Rebuild</a>
+{%   endif %}
       </div>
     </div>
-    <span class="quote_date">Last Modified: {{ quote.modified }}</span>
+{% endif %}
+{% if quote.getLabelDict.other %}
+    <div class="quote_labels"><b>Labels:</b> {{ quote.getLabelDict.other|escape }}</div>
+{% endif %}
+    <div style="clear: right; height: 0">&nbsp;</div>
   </div>
   <table class="quote_source" cellspacing="0">
 {% for line in quote.getDialog %}
     <tr class="{% cycle row0,row1 %}">
       <td>
-{%   if line.time %}
-        {{ line.time }}
+{%   if line.params.timestamp %}
+        {{ line.params.timestamp }}
 {%   else %}
         &nbsp;
 {%   endif %}
       </td>
       <td class="actor">
-{%   if line.actor %}
-        &lt;{{ line.actor|escape }}&gt;
+{%   if line.params.nick %}
+        &lt;{% if line.params.nickflag %}{{ line.params.nickflag|escape }}{% endif %}{{ line.params.nick|escape }}&gt;
 {%   else %}
         &nbsp;
 {%   endif %}
@@ -46,17 +83,13 @@
     </tr>
 {% endfor %}
   </table>
-  <div class="quote_footer roundbottom">
+  <div class="quote_footer">
 {% if quote.note %}
     <div class="quote_note">
       <span class="label">Note:</span>{{ quote.note }}
     </div>
 {% endif %}
-{% if quote.draft %}
-{%   ifequal quote.parent.key account.key %}
-    <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit Draft</a>
-{%   endifequal %}
-{% endif %}
-    &nbsp;
+    Link to this quote:
+    <a href="/q/{{ quote.parent_key.id }}/{{ quote.key.id }}">{{ request.application_url|escape }}/q/{{ quote.parent_key.id }}/{{ quote.key.id }}</a>
   </div>
 </div>

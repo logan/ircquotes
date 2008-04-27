@@ -2,7 +2,7 @@
 *.py?
 iq/app.yaml
 iq/index.yaml
+iq/louie
 iq/minifb.py
-iq/pydispatch
 iq/simplejson
 iqconfig.py

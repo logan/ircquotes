@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<table style="border: none; font-family: monospace;">
+  <tr>
+    <th><u>Name</u></th><th><u>Value</u></th>
+  </tr>
+{%   for item in request.environ.items %}
+  <tr>
+{%     for i in item %}
+    <td><pre>{{ i|escape }}</pre></td>
+{%     endfor %}
+  </tr>
+{%   endfor %}
+</table>
+{% endblock %}

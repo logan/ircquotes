@@ -5,6 +5,7 @@ import urllib
 import accounts
 import quotes
 import service
+import system
 
 class BrowseException(Exception):
   pass
@@ -14,8 +15,7 @@ class UnsupportedBrowseModeException(BrowseException): pass
 
 
 class PageSpecifier:
-  #DEFAULT_SIZE = 10
-  DEFAULT_SIZE = 3
+  DEFAULT_SIZE = 10
   MAX_PAGE_SIZE = 20
 
   def __init__(self, mode,
@@ -65,7 +65,7 @@ class PageSpecifier:
       elif param.startswith('r='):
         kwargs['reversed'] = bool(int(param[2:]))
       elif param.startswith('a='):
-        kwargs['account'] = accounts.Account.getByName(param[2:])
+        kwargs['account'] = accounts.Account.getById(param[2:])
     return PageSpecifier(**kwargs)
 
   def encode(self):
@@ -79,7 +79,7 @@ class PageSpecifier:
     if self.reversed:
       params.append(('r', '1'))
     if self.account:
-      params.append(('a', self.account.name))
+      params.append(('a', self.account.id))
     return ';'.join('%s=%s' % param for param in params)
     
   @staticmethod
@@ -103,6 +103,10 @@ class PageSpecifier:
     return datetime.datetime(year, month, day, hour, minute, second,
                              microsecond)
 
+  def __str__(self):
+    return '<PageSpecifier mode=%s start=%s offset=%s reversed=%s>' % (
+        self.mode, self.start_value, self.offset, self.reversed)
+
 
 class BrowseService(service.Service):
   def browseQuotes(self, default_page=None):
@@ -122,6 +126,9 @@ class BrowseService(service.Service):
       return
 
     quote_list, next_page_spec, prev_page_spec = fetcher(page_spec)
+    if page_spec.reversed:
+      prev_page_spec, next_page_spec = next_page_spec, prev_page_spec
+      quote_list.reverse()
     self.template.quotes = quote_list
 
     def maybeExportPage(name, spec, require_full_page):
@@ -131,10 +138,19 @@ class BrowseService(service.Service):
         return
       if require_full_page and len(quote_list) < page_spec.size:
         return
-      logging.info('template should include link to page spec: %r', spec)
+      if spec.reversed and not spec.start_value:
+        return
+      logging.info('latest quote: %s', system.getSystem().latest_quote)
+      if (spec.reversed
+          and spec.start_value
+          and system.getSystem().latest_quote
+          and spec.start_value >= system.getSystem().latest_quote):
+        return
+      logging.info('template should include link to page spec: %s', spec)
       setattr(self.template, name, spec)
-    maybeExportPage('next_page', next_page_spec, True)
-    maybeExportPage('prev_page', prev_page_spec, False)
+    logging.info('this page: %s', page_spec)
+    maybeExportPage('next_page', next_page_spec, not page_spec.reversed)
+    maybeExportPage('prev_page', prev_page_spec, page_spec.reversed)
 
   def fetch_recent(self, page):
     result = quotes.Quote.getRecentQuotes(start=page.start_value,
@@ -144,8 +160,12 @@ class BrowseService(service.Service):
                                           ancestor=page.account,
                                          )
     quote_list, start, offset = result
+    if page.reversed:
+      prev_offset = 1
+    else:
+      prev_offset = 0
     next = page.copy(start_value=start, offset=offset)
-    prev = page.copy(reversed=not page.reversed, offset=1)
+    prev = page.copy(reversed=not page.reversed, offset=prev_offset)
     return quote_list, next, prev
 
   def fetch_draft(self, page):
@@ -162,6 +182,7 @@ class BrowseService(service.Service):
     if not query:
       self.template.quotes = []
       return [], page, page
+    self.template.search_query = query
     quote_list = quotes.Quote.search(query=query,
                                      offset=page.offset,
                                      limit=page.size,
