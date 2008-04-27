@@ -299,12 +299,14 @@ class Quote(search.SearchableModel):
                            descending=False,
                            include_drafts=True,
                            ancestor=None,
+                           where=[],
+                           params={},
                           ):
     logging.info('quotes by ts: property=%s, start=%s, offset=%s limit=%s, descending=%s, drafts=%s, ancestor=%s',
                  property, start, offset, limit, descending, include_drafts, ancestor)
 
-    where = []
-    params = {}
+    where = where[:]
+    params = params.copy()
     op = '>='
     if descending:
       op = '<='
@@ -518,4 +520,5 @@ class Quote(search.SearchableModel):
           continue
       other.append(label)
     quote_labels['other'] = ', '.join(other)
+    quote_labels['other_list'] = other
     return quote_labels

@@ -199,7 +199,7 @@ table.form td {
 }
 
 .quote {
-  background: #afa;
+  background: #cfc;
   color: #343;
   margin-bottom: 2em;
 }
@@ -208,6 +208,10 @@ table.form td {
   font-size: x-small;
   margin-left: 0.5em;
   margin-right: 0.5em;
+}
+
+.quote_header .menu, .quote_header .quote_options_control {
+  background: #afa;
 }
 
 .quote_header div {
@@ -225,7 +229,7 @@ table.form td {
   font-weight: bold;
 }
 
-.quote_location span {
+.quote_location a {
   margin-right: 0.5em;
 }
 

@@ -177,6 +177,26 @@ class BrowseService(service.Service):
     prev = page.copy(offset=page.offset - page.size)
     return quote_list, next, prev
 
+  def fetch_label(self, page):
+    label = self.request.get('l')
+    result = quotes.Quote.getRecentQuotes(start=page.start_value,
+                                          offset=page.offset,
+                                          limit=page.size,
+                                          reversed=page.reversed,
+                                          ancestor=page.account,
+                                          where=['labels = :label'],
+                                          params={'label': label},
+                                         )
+    quote_list, start, offset = result
+    if page.reversed:
+      prev_offset = 1
+    else:
+      prev_offset = 0
+    context = 'l=%s' % urllib.quote(label)
+    next = page.copy(start_value=start, offset=offset)
+    prev = page.copy(reversed=not page.reversed, offset=prev_offset)
+    return quote_list, next, prev
+
   def fetch_search(self, page):
     query = self.request.get('q')
     if not query:

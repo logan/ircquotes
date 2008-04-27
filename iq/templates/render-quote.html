@@ -30,9 +30,18 @@
     </div>
 {% if quote.getLabelDict.network or quote.getLabelDict.server or quote.getLabelDict.channel %}
     <div class="quote_location">
-{%   if quote.getLabelDict.network %}<b>Network:</b> <span>{{quote.getLabelDict.network}}</span>{% endif %}
-{%   if quote.getLabelDict.server %}<b>Server:</b> <span>{{quote.getLabelDict.server}}</span>{% endif %}
-{%   if quote.getLabelDict.channel %}<b>Channel:</b> <span>{{quote.getLabelDict.channel}}</span>{% endif %}
+{%   if quote.getLabelDict.network %}
+      <b>Network:</b>
+      <a href="/browse?page=m=label&l=network:{{ quote.getLabelDict.network|urlencode}}">{{quote.getLabelDict.network}}</a>
+{%   endif %}
+{%   if quote.getLabelDict.server %}
+      <b>Server:</b>
+      <a href="/browse?page=m=label&l=server:{{ quote.getLabelDict.server|urlencode}}">{{quote.getLabelDict.server}}</a>
+{%   endif %}
+{%   if quote.getLabelDict.channel %}
+      <b>Channel:</b>
+      <a href="/browse?page=m=label&l=channel:{{ quote.getLabelDict.channel|urlencode}}">{{quote.getLabelDict.channel}}</a>
+{%   endif %}
     </div>
 {% endif %}
 {% if not preview and account.trusted %}
@@ -58,7 +67,12 @@
     </div>
 {% endif %}
 {% if quote.getLabelDict.other %}
-    <div class="quote_labels"><b>Labels:</b> {{ quote.getLabelDict.other|escape }}</div>
+    <div class="quote_labels">
+      <b>Labels:</b>
+{%   for label in quote.getLabelDict.other_list %}
+      <a href="/browse?page=m=label&l={{ label|urlencode }}">{{ label|escape }}</a>{% if not forloop.last %},{% endif %}
+{%   endfor %}
+    </div>
 {% endif %}
     <div style="clear: right; height: 0">&nbsp;</div>
   </div>
