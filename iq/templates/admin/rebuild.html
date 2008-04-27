@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<script>
+function Rebuilder(button) {
+  this.button = button;
+  this.started = false;
+  this.current_kind = null;
+  this.current_count = 0;
+  this.total = 0;
+  this.statusElement;
+  this.throbber = new Throbber(32);
+}
+
+Rebuilder.prototype.start = function() {
+  this.button.disabled = true;
+  this.started = true;
+  this.throbber.start($("rebuild_throbber"));
+  this.rebuildPending = false;
+  this.rebuildChunk();
+}
+
+Rebuilder.prototype.stop = function() {
+  this.started = false;
+  this.throbber.stop();
+  this.button.disabled = false;
+}
+
+Rebuilder.prototype.rebuildChunk = function() {
+  if (!this.started || this.rebuildPending) {
+    return;
+  }
+  log("requesting to rebuild a chunk");
+  var params = {};
+  if (this.last_sec) {
+    params["last_sec"] = this.last_sec;
+    params["last_usec"] = this.last_usec;
+  }
+  this.rebuildDeferred = loadJSONDoc("/json/rebuild", params);
+  this.rebuildDeferred.addCallbacks(bind(this.onDeletion, this),
+                                    bind(this.onError, this));
+}
+
+Rebuilder.prototype.onError = function(error) {
+  logError(error);
+  this.stop();
+  alert(error);
+}
+
+Rebuilder.prototype.onDeletion = function(response) {
+  try {
+    log("chunk rebuild response: ", response);
+    if (!response.count) {
+      this.stop();
+      alert("Rebuild completed!");
+      return;
+    }
+    this.updateTotal(response.count);
+    this.last_sec = response.last_sec;
+    this.last_usec = response.last_usec;
+    this.rebuildChunk();
+  } catch(error) {
+    logError(error);
+    alert(error);
+    this.stop();
+    return;
+  }
+}
+
+Rebuilder.prototype.updateTotal = function(count) {
+  this.total += count;
+  $("rebuild_total").innerHTML =
+    "<div class='kind'><b>Total:</b><span class='count'>" + this.total
+    + "</span>";
+}
+
+Rebuilder.prototype.startNewKind = function(kind, count) {
+  this.statusDiv = DIV({"class": "kind"},
+                       createDOM("B", null, kind + ":"),
+                       SPAN({"class": "count"}, count));
+  $("rebuild_log").appendChild(this.statusDiv);
+  this.current_kind = kind;
+  this.current_count = count;
+}
+
+Rebuilder.prototype.continueKind = function(count) {
+  var node = getFirstElementByTagAndClassName("*", "count", this.statusDiv);
+
+  this.current_count += count;
+  node.innerHTML = this.current_count;
+}
+
+function setup() {
+  var rebuildr = new Rebuilder(this);
+  $("rebuild_button").onclick = bind(rebuildr.start, rebuildr);
+}
+addLoadEvent(setup);
+</script>
+<style>
+.kind, #rebuild_total {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: right;
+  width: 200px;
+}
+
+.count {
+  display: inline-block;
+  width: 50px;
+}
+</style>
+<center>
+This will rebuild each quote, one at a time, in a process that will take hours.
+Are you sure you want to do this?
+<br>
+<input id="rebuild_button" type="button" value="Yes, do it!">
+<hr>
+<div id="rebuild_throbber" class="throbber">&nbsp;</div>
+<div id="rebuild_total">
+</div>
+<div id="rebuild_log">
+</div>
+</center>
+{% endblock %}
+
