@@ -40,7 +40,7 @@
       <span class="quote_options_control">Options &#9662;</span>
       <div class="quote_options_menu menu" style="display: none">
 {%   ifequal account.key quote.parent_key %}
-{%     if quote.draft %}
+{%     ifequal quote.state quote.DRAFT %}
         <a href="/edit-draft?key={{ quote.key|urlencode }}">Edit</a>
 {%     else %}
 {%       if quote.clone_of %}
@@ -48,7 +48,7 @@
 {%       else %}
         <a href="/edit?key={{ quote.key|urlencode }}">Edit</a>
 {%       endif %}
-{%     endif %}
+{%     endifequal %}
         <a href="/delete?key={{ quote.key|urlencode }}&return_url={{ delete_return_url|urlencode }}">Delete</a>
 {%   endifequal %}
 {%   if account.admin %}

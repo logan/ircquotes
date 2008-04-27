@@ -155,6 +155,12 @@ class NickFormatter(LineFormatter):
 
 
 class Quote(search.SearchableModel):
+  # State constants.  Their values should be ascending according to increasing
+  # visibility.
+  DELETED = 0
+  DRAFT = 1
+  PUBLISHED = 10
+
   # The text data
   dialog_source = db.TextProperty(required=True)
   formatting = db.BlobProperty()
@@ -165,6 +171,7 @@ class Quote(search.SearchableModel):
 
   # State bits
   draft = db.BooleanProperty(required=True, default=True)
+  state = db.IntegerProperty(default=DRAFT)
 
   # Timestamps
   submitted = db.DateTimeProperty(required=True, auto_now_add=True)
@@ -190,6 +197,7 @@ class Quote(search.SearchableModel):
       kwargs['submitted'] = submitted
     quote = cls(parent=account,
                 draft=True,
+                state=cls.DRAFT,
                 context=context,
                 dialog_source=source,
                 note=note,
@@ -232,6 +240,7 @@ class Quote(search.SearchableModel):
                   submitted=submitted,
                   modified=modified or submitted,
                   draft=False,
+                  state=cls.PUBLISHED,
                  )
     quote.rebuild()
     if new:
@@ -243,7 +252,7 @@ class Quote(search.SearchableModel):
     draft = cls.getQuoteByKey(account, key)
     if not draft:
       raise InvalidKeyException
-    if not draft.draft:
+    if draft.state != cls.DRAFT:
       raise InvalidQuoteStateException
     return draft
 
@@ -252,7 +261,7 @@ class Quote(search.SearchableModel):
     quote = cls.get(key)
     if not quote:
       raise InvalidKeyException
-    if quote.draft and account.key() != quote.parent_key():
+    if quote.state < cls.PUBLISHED and account.key() != quote.parent_key():
       raise NoPermissionException
     return quote
 
@@ -263,19 +272,13 @@ class Quote(search.SearchableModel):
     logging.info('quote = %r', quote)
     if not quote:
       raise InvalidKeyException
-    if quote.draft and account.key() != quote.parent_key():
+    if quote.state < cls.PUBLISHED and account.key() != quote.parent_key():
       raise NoPermissionException
     return quote
 
   @classmethod
   def getByLegacyId(cls, legacy_id):
     return cls.all().filter('legacy_id =', legacy_id).get()
-
-  @classmethod
-  def getPublishedQuote(key):
-    quote = cls.get(key)
-    if quote and not quote.draft:
-      return quote
 
   @classmethod
   def getRecentQuotes(cls, reversed=False, **kwargs):
@@ -299,22 +302,31 @@ class Quote(search.SearchableModel):
                           ):
     logging.info('quotes by ts: property=%s, start=%s, offset=%s limit=%s, descending=%s, drafts=%s, ancestor=%s',
                  property, start, offset, limit, descending, include_drafts, ancestor)
-    query = cls.all()
-    if ancestor:
-      query.ancestor(ancestor)
-    if not include_drafts:
-      query.filter('draft =', False)
+
+    where = []
+    params = {}
     op = '>='
     if descending:
       op = '<='
+    if not start: start = datetime.datetime.now()
     if start is not None:
-      logging.info('%s %s %s', property, op, start)
-      query.filter('%s %s' % (property, op), start)
+      where.append('%s %s :start' % (property, op))
+      params['start'] = start
+    if ancestor:
+      where.append('ANCESTOR IS :ancestor')
+      params['ancestor'] = ancestor
+    if not include_drafts:
+      where.append('state = :published')
+      params['published'] = cls.PUBLISHED
     if descending:
-      query.order('-%s' % property)
+      order = 'ORDER BY %s DESC' % property
     else:
-      query.order(property)
+      order = 'ORDER BY %s' % property
     logging.info('offset=%d, limit=%d', offset, limit)
+
+    gql = ("WHERE %s %s" % (' AND '.join(where), order))
+    logging.info('GQL: %s', gql)
+    query = cls.gql(gql, **params)
     quotes = list(query.fetch(offset=offset, limit=limit))
     logging.info('got back %d quotes', len(quotes))
     logging.info('%s', [(i, str(quotes[i].submitted), quotes[i].submitted) for i in xrange(len(quotes))])
@@ -330,7 +342,7 @@ class Quote(search.SearchableModel):
   def getDraftQuotes(cls, account, offset=0, limit=10, order='-submitted'):
     query = (cls.all()
              .ancestor(account)
-             .filter('draft =', True)
+             .filter('state =', cls.DRAFT)
              .order(order)
             )
     return list(query.fetch(offset=offset, limit=limit))
@@ -340,8 +352,16 @@ class Quote(search.SearchableModel):
     logging.info('quote search: query=%r, offset=%r, limit=%r', query, offset, limit)
     db_query = cls.all()
     db_query.search(query)
-    db_query.filter('draft =', False)
+    db_query.filter('state =', cls.PUBLISHED)
     return list(db_query.fetch(offset=offset, limit=limit))
+
+  def put(self):
+    if True or self.state is None:
+      if self.draft:
+        self.state = self.DRAFT
+      else:
+        self.state = self.PUBLISHED
+    return db.Model.put(self)
 
   def getProperties(self):
     return dict([(prop, getattr(self, prop, None))
@@ -360,7 +380,7 @@ class Quote(search.SearchableModel):
       return target
 
   def edit(self, account):
-    if self.draft:
+    if self.state < self.PUBLISHED:
       raise InvalidQuoteStateException
     if account.key() != self.parent_key():
       raise NoPermissionException
@@ -369,6 +389,7 @@ class Quote(search.SearchableModel):
     draft = self.clone()
     draft.clone_of = self
     draft.draft = True
+    draft.state = self.DRAFT
     draft.put()
     self.clone_of = draft
     self.put()
@@ -384,7 +405,7 @@ class Quote(search.SearchableModel):
 
   def publish(self, modified=None, update=False):
     logging.info('publish: modified=%s, update=%s', modified, update)
-    if not self.draft:
+    if self.state != self.DRAFT:
       raise InvalidQuoteStateException
     if self.clone_of:
       self.clone_of.republish(modified=modified)
@@ -392,6 +413,7 @@ class Quote(search.SearchableModel):
     def transaction():
       logging.info('xaction: draft=%r, clone_of=%s', self.draft, self.clone_of)
       self.draft = False
+      self.state = self.PUBLISHED
       if self.clone_of:
         self.clone_of.delete()
         self.clone_of = None
@@ -415,7 +437,7 @@ class Quote(search.SearchableModel):
              modified=None,
              publish=False,
             ):
-    if not self.draft:
+    if self.state != self.DRAFT:
       raise InvalidQuoteStateException
     if dialog is not None:
       self.dialog_source = dialog

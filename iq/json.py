@@ -56,11 +56,11 @@ def serializeJson(obj, f):
   elif isinstance(obj, bool):
     f.write(obj and 'true' or 'false')
   elif isinstance(obj, (int, str)):
-    f.write( repr(obj))
+    f.write(repr(obj))
   elif isinstance(obj, unicode):
-    f.write( repr(obj)[1:])
+    f.write(repr(obj)[1:])
   elif isinstance(obj, long):
-    f.write( str(obj)[:-1])
+    f.write(str(obj))
   elif isinstance(obj, datetime.datetime):
     value = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second,
              obj.microsecond]
@@ -116,10 +116,16 @@ class LogoutPage(service.LogoutService):
     self.logout()
 
 
-class ClearDataPage(service.ClearDataService):
+class ClearDataPage(service.RebuildService):
   @json(require_admin=True)
   def get(self):
     self.deleteChunk()
+
+
+class RebuildPage(service.RebuildService):
+  @json(require_admin=True)
+  def get(self):
+    self.rebuildChunk()
 
 
 class MigrationPage(service.Service):
@@ -205,6 +211,7 @@ def main():
     ('/json/migrate-quote', MigrateQuotePage),
     ('/json/login', LoginPage),
     ('/json/logout', LogoutPage),
+    ('/json/rebuild', RebuildPage),
     ('/json/wipe', ClearDataPage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)

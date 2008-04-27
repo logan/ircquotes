@@ -92,33 +92,27 @@ def Property(name):
 INDEX_CONFIG = IndexSet(
     Kind('Quote',
          Index(Property('__searchable_text_index'),
-               Property('draft'),
+               Property('state'),
               ),
 
-         Index(Property('-submitted')),
-
-         Index(Property('draft'),
+         Index(
+               Property('state'),
                Property('submitted'),
               ),
 
-         Index(Property('draft'),
+         Index(
+               Property('state'),
                Property('-submitted'),
               ),
 
-         Index(Property('submitted'),
-               ancestor=True,
-              ),
-
-         Index(Property('-submitted'),
-               ancestor=True,
-              ),
-
-         Index(Property('draft'),
+         Index(
+               Property('state'),
                Property('submitted'),
                ancestor=True,
               ),
 
-         Index(Property('draft'),
+         Index(
+               Property('state'),
                Property('-submitted'),
                ancestor=True,
               ),

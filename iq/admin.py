@@ -36,6 +36,12 @@ class AdminPage(service.Service):
     system.record(self.account, VERB_UPDATED, sys)
 
 
+class RebuildPage(service.Service):
+  @admin('rebuild.html')
+  def get(self):
+    pass
+
+
 class WipePage(service.Service):
   @admin('wipe.html')
   def get(self):
@@ -68,6 +74,7 @@ def main():
     ('/admin', AdminPage),
     ('/admin/api', ApiPage),
     ('/admin/env', EnvironmentPage),
+    ('/admin/rebuild', RebuildPage),
     ('/admin/wipe', WipePage),
   ]
   application = webapp.WSGIApplication(pages, debug=True)

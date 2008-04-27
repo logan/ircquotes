@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import urllib
+import time
 
 from google.appengine.api import users
 from google.appengine.ext import db
@@ -449,3 +450,22 @@ class ClearDataService(Service):
         self.template.count = count
         return
     self.template.done = True
+
+class RebuildService(Service):
+  DEFAULT_BATCH_SIZE = 20
+
+  def rebuildChunk(self):
+    batch_size = self.getIntParam('batch_size', self.DEFAULT_BATCH_SIZE)
+    total = self.getIntParam('total', 0)
+    last_sec = self.getIntParam('last_sec', time.time())
+    last_usec = self.getIntParam('last_usec', 0)
+    start = datetime.datetime.fromtimestamp(last_sec)
+    start += datetime.timedelta(microseconds=last_usec)
+    query = quotes.Quote.gql("WHERE submitted < :submitted"
+                             " ORDER BY submitted DESC", submitted=start)
+    self.template.count = 0
+    for quote in query.fetch(limit=batch_size):
+      quote.rebuild()
+      self.template.last_sec = int(time.mktime(quote.submitted.timetuple()))
+      self.template.last_usec = quote.submitted.microsecond
+      self.template.count += 1
