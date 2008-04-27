@@ -70,7 +70,7 @@ class Tag(object):
         elif child is not None:
           out.write(indent)
           out.write('  ')
-          out.write(encode(str(child).strip().replace('\n', '\n  ' + indent)))
+          out.write(encode(unicode(child).strip().replace('\n', '\n  ' + indent)))
           out.write('\n')
       out.write(indent)
       out.write('</%s>\n' % self._name)
