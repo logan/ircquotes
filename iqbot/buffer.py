@@ -1,3 +1,14 @@
+class historyLine:
+    def __init__(self, text, lineNumber):
+        self.text = text
+        self.lineNumber = lineNumber
+
+    def __cmp__(self, line):
+        return cmp([self.text, self.lineNumber], [line.text, line.lineNumber])
+
+    def __repr__(self):
+        return "{%d: %s}" % (self.lineNumber, self.text)
+
 class genericBuffer:
     def __init__(self):
         self.lines = []
@@ -39,12 +50,21 @@ class quoteBuffer(genericBuffer):
 class historyBuffer(genericBuffer):
     def __init__(self, maxSize):
         self.maxSize = maxSize
+        self.absLineNumber = 0
         genericBuffer.__init__(self)
 
     def addLine(self, line):
         if self.getSize() == self.getMaxSize():
             self.deleteLine(1)
-        genericBuffer.addLine(self, line)
+        genericBuffer.addLine(self, historyLine(line, self.absLineNumber))
+        self.absLineNumber += 1
+
+    def getAbsRange(self, start, end):
+        absBegin = self.lines[0].lineNumber
+        if start < absBegin:
+            raise IndexError
+        else:
+            return self.getRange(start - absBegin + 1, end - absBegin + 1)
 
     def getMaxSize(self):
         return self.maxSize
@@ -85,8 +105,13 @@ class bufferManager:
         (start, end) = lineString.split(',')
         if start[0] == '#' and end[0] == '#':
             return self.history.getRange(int(start[1:]), int(end[1:]))
-        else:
+        elif start[0] != '#' and end[0] != '#':
             return self.quotes[quoteId].getRange(int(start), int(end))
+        else:
+            absStartLine = self.getLine(start, quoteId)
+            absEndLine = self.getLine(end, quoteId)
+            return self.history.getAbsRange(absStartLine.lineNumber, absEndLine.lineNumber)
+
 
 class bufferFactory:
     def createQuoteBuffer(self):
