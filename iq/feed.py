@@ -125,7 +125,7 @@ class IndexFeedPage(service.Service):
       return tag.entry[
         tag.author[
           tag.name[action.actor.name],
-          tag.email[action.actor.email],
+          #tag.email[action.actor.email],
         ],
         tag.updated[action.timestamp],
         tag.id[url],

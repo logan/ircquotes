@@ -1,6 +1,9 @@
 <html>
   <head>
     <link rel="stylesheet" type="text/css" href="/iq.css">
+{% block links %}
+    <link rel="alternate" type="application/atom+xml" title="Atom" href="{{ request.application_url|escape }}/feed">
+{% endblock %}
     <script src="/MochiKit.js"></script>
     <script src="/iq.js"></script>
 {% if testing %}
