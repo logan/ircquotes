@@ -181,6 +181,10 @@ class LoginService(Service):
     self.template.id = id
     password = self.request.get('password')
     try:
+      logging.info('headers: %s', self.request.headers)
+      logging.info('body: %s', self.request.body)
+      logging.info('post: %s', self.request.POST.items())
+      logging.info('logging in with id = %r', id)
       account = accounts.Account.login(id, password)
       if account:
         self.setAccount(account)
