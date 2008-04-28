@@ -546,20 +546,23 @@ class Quote(search.SearchableModel):
 
       if rating:
         logging.info('updating old rating')
-        rating.timestamp = datetime.datetime.now()
         self.rating_total += value - rating.value
-        rating.value = value
       else:
         logging.info('new rating')
         self.rating_count += 1
         self.rating_total += value
-        rating = Rating(parent=account,
-                        quote=self,
-                        value=value,
-                       )
       self.put()
-      return rating.put()
-    return db.run_in_transaction(transaction)
+    db.run_in_transaction(transaction)
+
+    if rating:
+      rating.timestamp = datetime.datetime.now()
+      rating.value = value
+    else:
+      rating = Rating(parent=account,
+                      quote=self,
+                      value=value,
+                     )
+    return rating.put()
 
 
 class Rating(db.Model):
