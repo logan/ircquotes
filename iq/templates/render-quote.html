@@ -98,6 +98,9 @@
 {% endfor %}
   </table>
   <div class="quote_footer">
+{% if account.trusted %}
+    <table class="rating_container" key="{{ quote.key|escape }}" count="{{ quote.rating_count }}" total="{{ quote.rating_total }}"{% if quote.account_rating %} personal="{{ quote.account_rating }}"{% endif %}></table>
+{% endif %}
 {% if quote.note %}
     <div class="quote_note">
       <span class="label">Note:</span>{{ quote.note }}
@@ -105,5 +108,6 @@
 {% endif %}
     Link to this quote:
     <a href="/q/{{ quote.parent_key.id }}/{{ quote.key.id }}">{{ request.application_url|escape }}/q/{{ quote.parent_key.id }}/{{ quote.key.id }}</a>
+    <div style="clear: both; height: 0">&nbsp;</div>
   </div>
 </div>

@@ -461,3 +461,96 @@ Throbber.prototype.stop = function() {
   this.container.style.backgroundPosition = "top left";
   this.stopped = true;
 }
+
+
+function Rating(node) {
+  this.key = node.getAttribute("key");
+  this.count = parseInt(node.getAttribute("count"));
+  this.total = parseInt(node.getAttribute("total"));
+  this.personal = node.getAttribute("personal");
+  this.node = node;
+  this.deferred = null;
+  this.inputs = [];
+  this.message = DIV({"class": "message", "style": "display: none"});
+  this.average = TD({"rowSpan": "2"},
+                     "Average: " + (1.0 * this.total / this.count));
+
+  var label_row = TR(null, TD(null));
+  
+  for (var i = -5; i <= 5; i++) {
+    this.makeRadio(i);
+    label_row.appendChild(TD(null, i));
+  }
+
+  var input_row = TR(null, this.average,
+                     map(function(i) { return TD(null, i); }, this.inputs));
+
+  this.node.appendChild(input_row);
+  this.node.appendChild(label_row);
+  this.node.appendChild(this.message);
+}
+
+Rating.prototype.makeRadio = function(value) {
+  var options = {"type": "radio", "name": this.key, "value": value};
+
+  if (this.personal == "" + value) {
+    options.checked = "checked";
+  }
+
+  var input = INPUT(options);
+
+  input.onclick = bind(this.update, this);
+  this.inputs.push(input);
+}
+
+Rating.prototype.update = function() {
+  var params = {"key": this.key};
+
+  for (var i in this.inputs) {
+    if (this.inputs[i].checked) {
+      params.value = this.inputs[i].value;
+    }
+  }
+  this.showMessage("Saving...");
+  if (this.deferred) {
+    this.deferred.cancel();
+  }
+  this.deferred = iqCall("/json/rate-quote", params);
+  this.deferred.addCallbacks(bind(this.onSuccess, this),
+                             bind(this.onError, this));
+}
+
+Rating.prototype.onSuccess = function(response) {
+  // TODO: Update displayed rating metrics
+  this.hideMessage();
+  this.deferred = null;
+  if (response.ok) {
+    logDebug("total = " + response.total);
+    logDebug("count = " + response.count);
+    this.average.innerHTML = "Average: "
+                             + (1.0 * response.total / response.count);
+  }
+}
+
+Rating.prototype.onError = function(error) {
+  this.showMessage("Error: " + error);
+  this.deferred = null;
+}
+
+Rating.prototype.showMessage = function(msg) {
+  /*
+  this.message.innerHTML = msg;
+  setStyle(this.message, {"top": getStyle(this.node, "top"), "left": getStyle(this.node, "left")});
+  appear(this.message, {"duration": 0.5});
+  */
+}
+
+Rating.prototype.hideMessage = function() {
+  //fade(this.message, {"duration": 0.5});
+}
+
+function installRatings() {
+  map(function(node) { new Rating(node); },
+      getElementsByTagAndClassName("table", "rating_container"));
+}
+addLoadEvent(installRatings);

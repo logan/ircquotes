@@ -204,13 +204,27 @@ class MigrateQuotePage(MigrationPage):
     self.template.key = str(quote.key())
 
 
+class RateQuotePage(service.QuoteService):
+  @json()
+  def get(self):
+    self.template.ok = False
+    quote = self.getQuote()
+    if quote:
+      quote.rate(self.account, self.getIntParam('value'))
+      self.template.ok = True
+      self.template.quote = None
+      self.template.count = quote.rating_count
+      self.template.total = quote.rating_total
+
+
 def main():
   pages = [
     ('/json/create-account', CreateAccountPage),
-    ('/json/migrate-account', MigrateAccountPage),
-    ('/json/migrate-quote', MigrateQuotePage),
     ('/json/login', LoginPage),
     ('/json/logout', LogoutPage),
+    ('/json/migrate-account', MigrateAccountPage),
+    ('/json/migrate-quote', MigrateQuotePage),
+    ('/json/rate-quote', RateQuotePage),
     ('/json/rebuild', RebuildPage),
     ('/json/wipe', ClearDataPage),
   ]

@@ -63,6 +63,12 @@ class QuotePage(service.QuoteService):
     if quote:
       quote.owner_page = browse.PageSpecifier(mode='recent',
                                               account=quote.parent())
+      if self.account.trusted:
+        rating = quote.getAccountRating(self.account)
+        if rating:
+          quote.account_rating = str(rating.value)
+        else:
+          quote.account_rating = ''
     else:
       self.status = 404
 
@@ -75,6 +81,12 @@ class BrowsePage(browse.BrowseService):
       for quote in self.template.quotes:
         quote.owner_page = browse.PageSpecifier(mode='recent',
                                                 account=quote.parent())
+        if self.account.trusted:
+          rating = quote.getAccountRating(self.account)
+          if rating:
+            quote.account_rating = str(rating.value)
+          else:
+            quote.account_rating = ''
 
 
 class SearchPage(browse.BrowseService):

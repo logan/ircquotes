@@ -161,6 +161,10 @@ class Quote(search.SearchableModel):
   DRAFT = 1
   PUBLISHED = 10
 
+  # Rating range
+  MIN_RATING = -5
+  MAX_RATING = 5
+
   # The text data
   dialog_source = db.TextProperty(required=True)
   formatting = db.BlobProperty()
@@ -183,6 +187,10 @@ class Quote(search.SearchableModel):
 
   # Editing support
   clone_of = db.SelfReferenceProperty()
+
+  # Rating support
+  rating_total = db.IntegerProperty(default=0)
+  rating_count = db.IntegerProperty(default=0)
 
   @classmethod
   def createDraft(cls, account, source,
@@ -522,3 +530,39 @@ class Quote(search.SearchableModel):
     quote_labels['other'] = ', '.join(other)
     quote_labels['other_list'] = other
     return quote_labels
+
+  def getAccountRating(self, account):
+    return Rating.all().ancestor(account).filter('quote =', self).get()
+
+  def rate(self, account, value):
+    rating = self.getAccountRating(account)
+    def transaction(rating=rating):
+      # TODO: Rating buckets
+      #name = 'rating_bucket_%d' % value
+      #logging.info('incrementing %s', name)
+      #setattr(self, name, getattr(self, name, 0) + 1)
+      logging.info('rating count: %d, total: %d',
+                   self.rating_count, self.rating_total)
+
+      if rating:
+        logging.info('updating old rating')
+        rating.timestamp = datetime.datetime.now()
+        self.rating_total += value - rating.value
+        rating.value = value
+      else:
+        logging.info('new rating')
+        self.rating_count += 1
+        self.rating_total += value
+        rating = Rating(parent=account,
+                        quote=self,
+                        value=value,
+                       )
+      self.put()
+      return rating.put()
+    return db.run_in_transaction(transaction)
+
+
+class Rating(db.Model):
+  quote = db.ReferenceProperty(Quote, required=True)
+  value = db.IntegerProperty(required=True)
+  timestamp = db.DateTimeProperty(required=True, auto_now_add=True)

@@ -280,8 +280,25 @@ table.form td {
   margin-right: 1ex;
 }
 
+.rating_container {
+  float: right;
+  font-size: xx-small;
+}
+
+.rating_container TD {
+  font-size: xx-small;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.rating_container .message {
+  font-size: medium;
+  font-weight: bold;
+  position: absolute;
+}
+
 #create_account {
-  background: #cfc;
   margin-left: auto;
   margin-right: auto;
   min-width: 600px;
