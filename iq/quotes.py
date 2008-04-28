@@ -415,7 +415,7 @@ class Quote(search.SearchableModel):
 
   def publish(self, modified=None, update=False):
     logging.info('publish: modified=%s, update=%s', modified, update)
-    if self.state != self.DRAFT:
+    if not update and self.state != self.DRAFT:
       raise InvalidQuoteStateException
     if self.clone_of:
       self.clone_of.republish(modified=modified)
