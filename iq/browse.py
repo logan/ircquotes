@@ -193,8 +193,14 @@ class BrowseService(service.Service):
     else:
       prev_offset = 0
     context = 'l=%s' % urllib.quote(label)
-    next = page.copy(start_value=start, offset=offset)
-    prev = page.copy(reversed=not page.reversed, offset=prev_offset)
+    next = page.copy(start_value=start,
+                     offset=offset,
+                     context=context,
+                    )
+    prev = page.copy(reversed=not page.reversed,
+                     offset=prev_offset,
+                     context=context,
+                    )
     return quote_list, next, prev
 
   def fetch_search(self, page):
