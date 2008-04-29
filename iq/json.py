@@ -6,6 +6,8 @@ import os
 import pickle
 import wsgiref.handlers
 
+import simplejson
+
 from google.appengine.ext import webapp
 
 import accounts
@@ -30,7 +32,7 @@ def json(**kwargs):
       if use_pickle:
         encoder = pickle.dump
       else:
-        encoder = serializeJson
+        encoder = simplejson.dump
       data = self.template.__dict__.copy()
       for field in SUPPRESSED_SERVICE_TEMPLATE_FIELDS:
         if field in data:
@@ -48,50 +50,6 @@ def json(**kwargs):
       logging.info('JSON response:\n%s', g.getvalue())
     return wrapper
   return decorator
-
-
-def serializeJson(obj, f):
-  if obj is None:
-    f.write('null')
-  elif isinstance(obj, bool):
-    f.write(obj and 'true' or 'false')
-  elif isinstance(obj, (int, str)):
-    f.write(repr(obj))
-  elif isinstance(obj, unicode):
-    f.write(repr(obj)[1:])
-  elif isinstance(obj, long):
-    f.write(str(obj))
-  elif isinstance(obj, datetime.datetime):
-    value = [obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second,
-             obj.microsecond]
-    f.write(repr(value))
-  elif isinstance(obj, Exception):
-    f.write(repr(obj.__class__.__name__))
-  elif isinstance(obj, (tuple, list)):
-    f.write('[')
-    first = True
-    for i in obj:
-      if first:
-        first = False
-      else:
-        f.write(',')
-      serializeJson(i, f)
-    f.write(']')
-  elif isinstance(obj, dict):
-    f.write('{')
-    first = True
-    for name, value in obj.iteritems():
-      if first:
-        first = False
-      else:
-        f.write(',')
-      if not isinstance(name, str):
-        raise ValueError(name)
-      f.write('%r:' % name)
-      serializeJson(value, f)
-    f.write('}')
-  else:
-    raise ValueError(obj)
 
 
 def serializePickle(obj, f):

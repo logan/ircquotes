@@ -465,15 +465,15 @@ Throbber.prototype.stop = function() {
 
 function Rating(node) {
   this.key = node.getAttribute("key");
-  this.count = parseInt(node.getAttribute("count"));
-  this.total = parseInt(node.getAttribute("total"));
   this.personal = node.getAttribute("personal");
   this.node = node;
   this.deferred = null;
   this.inputs = [];
   this.message = DIV({"class": "message", "style": "display: none"});
-  this.average = TD({"rowSpan": "2"},
-                     "Average: " + (1.0 * this.total / this.count));
+  this.average = TD({"rowSpan": "2"});
+
+  this.setTotalAndCount(parseInt(node.getAttribute("count")),
+                        parseInt(node.getAttribute("total")));
 
   var label_row = TR(null, TD(null));
   
@@ -488,6 +488,12 @@ function Rating(node) {
   this.node.appendChild(input_row);
   this.node.appendChild(label_row);
   this.node.appendChild(this.message);
+}
+
+Rating.prototype.setTotalAndCount = function(total, count) {
+  this.total = total;
+  this.count = count;
+  this.average.innerHTML = "Average: " + twoDigitAverage(total, count);
 }
 
 Rating.prototype.makeRadio = function(value) {
@@ -525,10 +531,7 @@ Rating.prototype.onSuccess = function(response) {
   this.hideMessage();
   this.deferred = null;
   if (response.ok) {
-    logDebug("total = " + response.total);
-    logDebug("count = " + response.count);
-    this.average.innerHTML = "Average: "
-                             + (1.0 * response.total / response.count);
+    this.setTotalAndCount(response.total, response.count);
   }
 }
 
