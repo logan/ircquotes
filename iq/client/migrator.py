@@ -60,3 +60,33 @@ def MigrateQuotes(db, client, rewrite=False):
       logging.fatal('[Quote: %3d/%d] Error: %s', i + 1, len(rows),
                     response.status)
       raise RuntimeError
+
+
+def MigrateRatings(db, client, offset=0):
+  dead_users = [
+    126,
+    232,
+    327,
+    472,
+    604,
+    761,
+  ]
+
+  cursor = db.cursor()
+  while True:
+    cursor.execute("SELECT quote_id, user_id, rating FROM ratings"
+                   " ORDER BY quote_id, user_id LIMIT %d,100"
+                   % offset)
+    rows = cursor.fetchall()
+    if not rows:
+      break
+    for quote_id, user_id, rating in rows:
+      if user_id not in dead_users:
+        response = client.call_migrate_rating(quote_id=quote_id,
+                                              user_id=user_id,
+                                              value=rating,
+                                             )
+        if not response.ok:
+          raise RuntimeError('Died with offset=%d: %s' % (offset, response.details))
+      offset += 1
+      print "Counter: %d" % offset

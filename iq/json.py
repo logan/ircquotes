@@ -175,6 +175,23 @@ class RateQuotePage(service.QuoteService):
       self.template.total = quote.rating_total
 
 
+class MigrateRatingPage(service.Service):
+  @json()
+  def post(self):
+    self.template.ok = False
+    quote_id = self.getIntParam('quote_id')
+    user_id = self.getIntParam('user_id')
+    value = self.getIntParam('value')
+    quote = quotes.Quote.getByLegacyId(quote_id)
+    account = accounts.Account.getByLegacyId(user_id)
+    if quote and account:
+      quote.rate(account, value)
+      self.template.ok = True
+    else:
+      self.template.details = 'quote_id: %d -> %s, user_id: %d -> %s' % (
+          quote_id, quote, user_id, account)
+
+
 def main():
   pages = [
     ('/json/create-account', CreateAccountPage),
@@ -182,6 +199,7 @@ def main():
     ('/json/logout', LogoutPage),
     ('/json/migrate-account', MigrateAccountPage),
     ('/json/migrate-quote', MigrateQuotePage),
+    ('/json/migrate-rating', MigrateRatingPage),
     ('/json/rate-quote', RateQuotePage),
     ('/json/rebuild', RebuildPage),
     ('/json/wipe', ClearDataPage),

@@ -3,6 +3,8 @@ import logging
 import pickle
 import urllib
 
+import simplejson
+
 class JsonResponse:
   def __init__(self, response, pickle_mapping=None):
     self.__response = response.copy()
@@ -43,7 +45,7 @@ def jsonDecoder(f):
   # TODO: Use a real JSON parser.
   data = f.read()
   logging.debug('response: %r', data)
-  return JsonResponse(eval(data))
+  return JsonResponse(simplejson.loads(data))
 
 
 class IqJsonClient(object):

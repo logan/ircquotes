@@ -24,6 +24,7 @@ def main():
   parser.add_option('-U', '--userid', dest='userid', default='migrator')
   parser.add_option('-S', '--secret', dest='secret')
   parser.add_option('-r', '--rewrite', action='store_true', dest='rewrite')
+  parser.add_option('-o', '--offset', type='int', dest='offset', default=0)
 
   options, args = parser.parse_args()
 
@@ -51,7 +52,7 @@ def main():
   c = client.IqJsonClient(options.userid, options.secret,
                           host=options.appbase,
                           baseuri='/json',
-                          use_pickle=True,
+                          #use_pickle=True,
                          )
 
   for target in targets:
@@ -59,6 +60,8 @@ def main():
       migrator.MigrateAccounts(conn, c, options.rewrite)
     elif target == 'quotes':
       migrator.MigrateQuotes(conn, c, options.rewrite)
+    elif target == 'ratings':
+      migrator.MigrateRatings(conn, c, options.offset)
     else:
       parser.error('Invalid migration target specified.')
     print 'Done with %s!' % target
