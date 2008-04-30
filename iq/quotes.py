@@ -137,7 +137,7 @@ class TimestampFormatter(LineFormatter):
 class NickFormatter(LineFormatter):
   NICK = re.compile(r'^\s*[\[<\(]?'
                     r'(?P<nickflag>[\s@+])?'
-                    r"(?P<nick>[\w\d`\[\]{}\\|-]+)[\]>\):]+\s?")
+                    r"(?P<nick>[\w\d^`\[\]{}\\|-]+)[\]>\):]+\s?")
   NORMALIZATION = re.compile('[^\w\d]')
 
   @classmethod
