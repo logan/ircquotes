@@ -134,6 +134,11 @@ INDEX_CONFIG = IndexSet(
               ),
         ),
 
+    Kind('Rating',
+         Index(Property('quote')),
+         ancestor=True,
+        ),
+
     Kind('Action',
          Index(
                Property('verb'),
