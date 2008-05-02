@@ -298,6 +298,10 @@ table.form td {
   position: absolute;
 }
 
+.rating_chart img {
+  position: relative;
+}
+
 #create_account {
   margin-left: auto;
   margin-right: auto;

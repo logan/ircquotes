@@ -485,9 +485,23 @@ function Rating(node) {
   var input_row = TR(null, this.average,
                      map(function(i) { return TD(null, i); }, this.inputs));
 
+  this.chart_control = SPAN(null, "Rating Chart &#9662;");
+  this.chart_control.onclick = bind(this.toggleChart, this);
+  this.chart_img = IMG({"src": node.getAttribute("chart")});
+  this.chart = DIV({"class": "menu", "style": "display: none"}, this.chart_img);
+  log("chart_img -> ", this.chart_img)
+
   this.node.appendChild(input_row);
   this.node.appendChild(label_row);
-  this.node.appendChild(this.message);
+  this.node.appendChild(DIV(null, this.chart_control, this.chart));
+}
+
+Rating.prototype.toggleChart = function() {
+  if (getStyle(this.chart, "display") == "none") {
+    slideDown(this.chart, {"duration": 0.5});
+  } else {
+    slideUp(this.chart, {"duration": 0.5});
+  }
 }
 
 Rating.prototype.setTotalAndCount = function(total, count) {
@@ -517,7 +531,6 @@ Rating.prototype.update = function() {
       params.value = this.inputs[i].value;
     }
   }
-  this.showMessage("Saving...");
   if (this.deferred) {
     this.deferred.cancel();
   }
@@ -527,29 +540,16 @@ Rating.prototype.update = function() {
 }
 
 Rating.prototype.onSuccess = function(response) {
-  // TODO: Update displayed rating metrics
-  this.hideMessage();
   this.deferred = null;
   if (response.ok) {
+    this.chart_img.src = response.chart_url;
     this.setTotalAndCount(response.total, response.count);
   }
 }
 
 Rating.prototype.onError = function(error) {
-  this.showMessage("Error: " + error);
+  logError("Error: " + error);
   this.deferred = null;
-}
-
-Rating.prototype.showMessage = function(msg) {
-  /*
-  this.message.innerHTML = msg;
-  setStyle(this.message, {"top": getStyle(this.node, "top"), "left": getStyle(this.node, "left")});
-  appear(this.message, {"duration": 0.5});
-  */
-}
-
-Rating.prototype.hideMessage = function() {
-  //fade(this.message, {"duration": 0.5});
 }
 
 function installRatings() {

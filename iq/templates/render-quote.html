@@ -99,7 +99,8 @@
   </table>
   <div class="quote_footer">
 {% if account.trusted %}
-    <table class="rating_container" key="{{ quote.key|escape }}" count="{{ quote.rating_count }}" total="{{ quote.rating_total }}"{% if quote.account_rating %} personal="{{ quote.account_rating }}"{% endif %}></table>
+    <table class="rating_container" key="{{ quote.key|escape }}" count="{{ quote.rating_count }}" total="{{ quote.rating_total }}"{% if quote.account_rating %} personal="{{ quote.account_rating }}"{% endif %} chart="{{ quote.ratingBucketChart|escape }}">
+    </table>
 {% endif %}
 {% if quote.note %}
     <div class="quote_note">

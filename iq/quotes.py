@@ -3,6 +3,7 @@ import logging
 import pickle
 import re
 import time
+import urllib
 
 from google.appengine.ext import db
 from google.appengine.ext import search
@@ -191,6 +192,7 @@ class Quote(search.SearchableModel):
   # Rating support
   rating_total = db.IntegerProperty(default=0)
   rating_count = db.IntegerProperty(default=0)
+  rating_buckets = db.BlobProperty()
 
   @classmethod
   def createDraft(cls, account, source,
@@ -538,18 +540,14 @@ class Quote(search.SearchableModel):
   def rate(self, account, value):
     rating = self.getAccountRating(account)
     def transaction(rating=rating):
-      # TODO: Rating buckets
-      #name = 'rating_bucket_%d' % value
-      #logging.info('incrementing %s', name)
-      #setattr(self, name, getattr(self, name, 0) + 1)
-      logging.info('rating count: %d, total: %d',
-                   self.rating_count, self.rating_total)
-
+      buckets = self.getRatingBuckets()
+      if rating and rating.value in buckets:
+        buckets[rating.value] -= 1
+      buckets[value] = buckets.get(value, 0) + 1
+      self.setRatingBuckets(buckets)
       if rating:
-        logging.info('updating old rating')
         self.rating_total += value - rating.value
       else:
-        logging.info('new rating')
         self.rating_count += 1
         self.rating_total += value
       self.put()
@@ -564,6 +562,58 @@ class Quote(search.SearchableModel):
                       value=value,
                      )
     return rating.put()
+
+  def getRatingBuckets(self):
+    logging.info('get rating buckets')
+    if self.rating_buckets:
+      logging.info('loading from pickle')
+      return pickle.loads(self.rating_buckets)
+    else:
+      return {}
+
+  def rebuildRatingBuckets(self):
+    buckets = {}
+    logging.info('loading from ratings')
+    query = Rating.all().filter('quote =', self.key())
+    for rating in query.fetch(offset=0, limit=1000):
+      buckets[rating.value] = buckets.get(rating.value, 0) + 1
+    if sum(buckets.itervalues()) >= 1000:
+      logging.info('quote has > 1000 ratings?')
+      for rating in query.fetch(offset=1000, limit=1000):
+        buckets[rating.value] = buckets.get(rating.value, 0) + 1
+    self.setRatingBuckets(buckets)
+    self.put()
+
+  def setRatingBuckets(self, buckets):
+    self.rating_buckets = pickle.dumps(buckets)
+
+  def ratingBucketChart(self, size='350x75'):
+    try:
+      logging.info('ratingBucketChart')
+      keys = range(self.MIN_RATING, self.MAX_RATING + 1)
+      buckets = self.getRatingBuckets()
+      if not buckets:
+        self.rebuildRatingBuckets()
+        buckets = self.getRatingBuckets()
+      logging.info('buckets: %r', buckets)
+    except:
+      logging.exception('failed to get buckets')
+      raise
+    if buckets:
+      top = max(buckets.values())
+    else:
+      top = 1
+    params = {
+      'cht': 'bvs',
+      'chs': size,
+      'chd':
+        't:%s' % ','.join(str(100 * buckets.get(i, 0) // top) for i in keys),
+      'chco': '334433',
+      'chxt': 'x',
+      'chxl': '0:|%s' % '|'.join(map(str, keys)),
+      'chf': 'bg,s,ccffcc',
+    }
+    return 'http://chart.apis.google.com/chart?%s' % urllib.urlencode(params)
 
 
 class Rating(db.Model):

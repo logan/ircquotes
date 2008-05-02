@@ -173,6 +173,7 @@ class RateQuotePage(service.QuoteService):
       self.template.quote = None
       self.template.count = quote.rating_count
       self.template.total = quote.rating_total
+      self.template.chart_url = quote.ratingBucketChart()
 
 
 class MigrateRatingPage(service.Service):
