@@ -57,6 +57,12 @@ APP_CONFIG_TEMPLATE = {
       'expiration': '1d',
     },
     {
+      'url': r'/favicon\.ico',
+      'static_files': r'icons/favicon.ico',
+      'upload': r'icons/favicon.ico',
+      'expiration': '1d',
+    },
+    {
       'url': r'/.*',
       'script': 'ui.py',
     },
