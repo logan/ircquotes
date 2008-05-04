@@ -140,11 +140,14 @@ class TimestampFormatter(LineFormatter):
     match = cls.TIME.match(line)
     if match:
       groups = match.groupdict(0)
-      timestamp = datetime.time(int(groups['hour']), int(groups['minute']),
-                                int(groups['second']))
-      return cls(range=(match.start(), match.end()),
-                 params={'timestamp': timestamp},
-                )
+      try:
+        timestamp = datetime.time(int(groups['hour']), int(groups['minute']),
+                                  int(groups['second']))
+        return cls(range=(match.start(), match.end()),
+                   params={'timestamp': timestamp},
+                  )
+      except ValueError:
+        return None
 
 
 class NickFormatter(LineFormatter):
