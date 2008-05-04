@@ -13,7 +13,7 @@ option = py.test.config.addoptions('iq options',
                 ' by looking at dev_appserver.py in PATH.'),
 )
 
-GOOGLE_DEPENDENCIES = ['', 'lib/yaml/lib']
+GOOGLE_DEPENDENCIES = ['', 'lib/yaml/lib', 'lib/webob']
 
 if False and option.googlebase:
   base = option.googlebase

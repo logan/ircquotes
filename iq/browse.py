@@ -45,6 +45,7 @@ class PageSpecifier:
     copyAttribute('size')
     copyAttribute('reversed')
     copyAttribute('account')
+    copyAttribute('context')
     logging.info('page copy: %r', kwargs)
     return PageSpecifier(**kwargs)
 
