@@ -339,3 +339,49 @@ class TestAccount:
     assert not a2.isAdmin()
     assert a3.isAdmin()
     assert system.getSystem().owner == 'name1'
+
+
+class TestSession:
+  def setup_method(self, method):
+    test_utils.setup()
+    provider.registry.register(type(None), provider.IClock, FakeClock)
+
+  def teardown_method(self, method):
+    provider.registry.unregister(type(None), provider.IClock, FakeClock)
+
+  def test_temporary(self):
+    session = accounts.Session.temporary()
+    assert session.id == 'temporary'
+
+  def test_put(self):
+    session = accounts.Session(id='id')
+    key = session.put()
+    assert key is not None
+    session = accounts.Session.get(key)
+    assert session.id == 'id'
+    session.id = 'temporary'
+    assert session.put() is None
+
+  def test_load(self):
+    session = accounts.Session.load('id1')
+    assert session.id == 'id1'
+    key = session.key()
+    assert accounts.Session.all().filter('id =', 'id1').get().key() == key
+    session = accounts.Session.load('id1')
+    assert session.key() == key
+    assert session.account.id == 'iq/anonymous'
+
+  def test_expireAll(self):
+    for i in xrange(2 * accounts.Session.LIFETIME_DAYS):
+      session = accounts.Session.load('s%d' % i)
+      session.created = FakeClock.NOW - datetime.timedelta(days=i)
+      session.put()
+    accounts.Session.expireAll()
+    for i in xrange(2 * accounts.Session.LIFETIME_DAYS):
+      session = accounts.Session.load('s%d' % i)
+      logging.info('%s created %s', session.id, session.created)
+      if i <= accounts.Session.LIFETIME_DAYS:
+        assert session.created == FakeClock.NOW - datetime.timedelta(days=i)
+      else:
+        assert session.created > FakeClock.NOW
+

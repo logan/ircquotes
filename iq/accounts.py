@@ -364,16 +364,9 @@ class Session(db.Expando):
     return session
 
   @classmethod
-  def deleteAllEntities(cls):
-    query = cls.all().fetch(limit=100)
-    for i, session in enumerate(query):
-      session.delete()
-    return i == 100
-
-  @classmethod
   def temporary(cls):
     return cls(id='temporary')
 
   def put(self):
     if self.id != 'temporary':
-      db.Expando.put(self)
+      return db.Expando.put(self)
