@@ -327,9 +327,14 @@ class TestAccount:
     a1.trusted = True
     a1.put()
     a2 = accounts.Account.createIq('name2', 'email', 'password')
+    a2.trusted = True
+    a2.put()
     a3 = accounts.Account.createIq('name3', 'email', 'password')
     a3.admin = True
     a3.put()
+
+    # a0 and a1 compete to become owners; a1 wins because a0 isn't trusted
+    # a2 is trusted, but the owner is already selected
 
     assert not a0.isAdmin()
     assert not a1.admin
@@ -339,6 +344,16 @@ class TestAccount:
     assert not a2.isAdmin()
     assert a3.isAdmin()
     assert system.getSystem().owner == 'name1'
+
+  def test_repr(self):
+    a = accounts.Account(id='id', name='name')
+    assert repr(a) == "<Account: 'id' untrusted 'name'>"
+    a.admin = True
+    assert repr(a) == "<Account: 'id' untrusted, admin 'name'>"
+    a.trusted = True
+    assert repr(a) == "<Account: 'id' admin 'name'>"
+    a.admin = False
+    assert repr(a) == "<Account: 'id' 'name'>"
 
 
 class TestSession:

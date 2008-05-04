@@ -1,5 +1,6 @@
 *.sw?
 *.py?
+.coverage
 iq/app.yaml
 iq/index.yaml
 iq/louie
