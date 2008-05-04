@@ -12,6 +12,7 @@ from google.appengine.ext import webapp
 import accounts
 import hash
 import mailer
+import provider
 import quotes
 import system
 
@@ -81,7 +82,6 @@ class Service(webapp.RequestHandler):
   def getDateTimeParam(self, name, *args, **kwargs):
     return self._getParam(name, args, kwargs, self._parseDateTimeParam)
 
-  @provider.adapter(Service, mailer.IMailer)
   def getMailer(self):
     if self.inTestingMode():
       return mailer.TestingModeMailer()
@@ -179,6 +179,8 @@ class Service(webapp.RequestHandler):
     self.template.request = self.request
     self.template.system = system.getSystem()
     self.template.google_signin = users.create_login_url(self.request.path)
+
+provider.registry.register(Service, mailer.IMailer, Service.getMailer)
 
 
 class LoginService(Service):
