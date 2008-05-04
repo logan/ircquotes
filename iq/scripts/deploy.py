@@ -10,6 +10,7 @@ IQ_DEPENDENCIES = [
   'minifb.py',
   'louie',
   'simplejson',
+  'zope',
 ]
 
 GOOGLE_DEPENDENCIES = [

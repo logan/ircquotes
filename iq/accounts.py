@@ -7,6 +7,7 @@ from google.appengine.ext import db
 
 import hash
 import mailer
+import provider
 import system
 
 ACTIVATION_EMAIL_TEMPLATE = '''Dear %(name)s,
@@ -108,7 +109,7 @@ class Account(db.Expando):
 
   MAX_NAME_LENGTH = 20
   NAME_INVALID_CHARACTER_PATTERN = re.compile(r"[^\w\d'\[\]{}\\| -]")
-  NAME_LETTER_PATTERN = re.compile(r'\w')
+  NAME_LETTER_PATTERN = re.compile(r'[A-Za-z]')
 
   MAX_EMAIL_LENGTH = 32
   EMAIL_PATTERN = re.compile(r'.+@.+\...+')
@@ -185,7 +186,7 @@ class Account(db.Expando):
       raise InvalidAccountStateException
     if account.activation != activation:
       raise InvalidActivationException
-    account.activated = datetime.datetime.now()
+    account.activated = provider.IClock(None).now()
     account.activation = None
     account.trusted = True
     account.put()
@@ -194,7 +195,6 @@ class Account(db.Expando):
 
   @classmethod
   def login(cls, id, password):
-    hashpw = hash.generate(password)
     if id.startswith('iq/') and '@' in id:
       logging.info('getting by email: %r', id[3:])
       account = cls.getByEmail(id[3:])
@@ -205,6 +205,7 @@ class Account(db.Expando):
       raise NoSuchAccountException
     if account.activated is None and account.password is None:
       raise NotActivatedException
+    hashpw = hash.IHash(password)
     if account.password != password and account.password != hashpw:
       raise InvalidPasswordException
     return account
@@ -215,10 +216,9 @@ class Account(db.Expando):
     account = cls(id='iq/%s' % name.lower(),
                   name=name,
                   email=email.strip().lower(),
-                  password=password,
                  )
-
-    account.put()
+    # setPassword also calls put
+    account.setPassword(password)
     return account
 
   @classmethod
@@ -228,7 +228,7 @@ class Account(db.Expando):
                   email=email.lower(),
                   password=password,
                   created=created,
-                  activated=datetime.datetime.now(),
+                  activated=provider.IClock(None).now(),
                   legacy_id=user_id,
                   trusted=True,
                  )
@@ -240,7 +240,7 @@ class Account(db.Expando):
   def createFacebook(cls, facebook_id, name):
     account = cls(id='facebook/%s' % facebook_id,
                   name=name,
-                  activated=datetime.datetime.now(),
+                  activated=provider.IClock(None).now(),
                   trusted=True,
                  )
     account.put()
@@ -251,7 +251,7 @@ class Account(db.Expando):
   def createGoogleAccount(cls, user):
     account = cls(id='google/%s' % user.nickname(),
                   name=user.nickname(),
-                  activated=datetime.datetime.now(),
+                  activated=provider.IClock(None).now(),
                   trusted=True,
                  )
     account.put()
@@ -262,8 +262,8 @@ class Account(db.Expando):
   def createApi(cls, name, admin=False):
     account = cls(id='api/%s' % name,
                   name=name,
-                  password = hash.generate(),
-                  activated=datetime.datetime.now(),
+                  password = hash.IHash(None),
+                  activated=provider.IClock(None).now(),
                   trusted=True,
                   admin=admin,
                  )
@@ -272,7 +272,7 @@ class Account(db.Expando):
 
   def setupActivation(self, mailer, base_url):
     if not self.activation:
-      self.activation = hash.generate()
+      self.activation = hash.IHash(None)
       self.put()
       logging.info("Activating account: id=%r, email=%r, activation=%r",
                    self.id, self.email, self.activation)
@@ -291,7 +291,7 @@ class Account(db.Expando):
   def requestPasswordReset(self, mailer, base_url):
     if not self.trusted:
       return self.setupActivation(mailer, base_url)
-    self.activation = hash.generate()
+    self.activation = hash.IHash(None)
     self.put()
     mailer.send(account=self,
                 subject='IrcQuotes password reset',
@@ -303,7 +303,7 @@ class Account(db.Expando):
                 })
 
   def setPassword(self, password):
-    self.password = hash.generate(password)
+    self.password = hash.IHash(password)
     self.activation = None
     self.put()
 
@@ -343,7 +343,7 @@ class Session(db.Expando):
 
   @classmethod
   def expireAll(cls):
-    now = datetime.datetime.now()
+    now = provider.IClock(None).now()
     expiration = now - datetime.timedelta(days=cls.LIFETIME_DAYS)
     query = cls.all().filter("created <", expiration)
     for session in query:

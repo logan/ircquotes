@@ -5,4 +5,5 @@ iq/index.yaml
 iq/louie
 iq/minifb.py
 iq/simplejson
+iq/zope
 iqconfig.py

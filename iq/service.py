@@ -81,15 +81,20 @@ class Service(webapp.RequestHandler):
   def getDateTimeParam(self, name, *args, **kwargs):
     return self._getParam(name, args, kwargs, self._parseDateTimeParam)
 
+  @provider.adapter(Service, mailer.IMailer)
+  def getMailer(self):
+    if self.inTestingMode():
+      return mailer.TestingModeMailer()
+    else:
+      return mailer.ProductionModeMailer()
+
   def handleRequest(self, impl, require_trusted, require_admin, template,
                     pre_hook=None):
     self.template = template
+    self.mailer = mailer.IMailer(self)
     if self.inTestingMode():
-      self.mailer = mailer.TestingModeMailer()
       self.template.mailer = self.mailer
       self.template.testing = True
-    else:
-      self.mailer = mailer.ProductionModeMailer()
     self.setupSession()
     self.setupTemplate()
     logging.info('require_trusted=%r, account.trusted=%r',

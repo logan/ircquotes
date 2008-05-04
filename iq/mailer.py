@@ -1,22 +1,34 @@
 from google.appengine.api import mail
 
-class AbstractMailer:
-  def send(self, account, subject, body):
-    raise NotImplementedError
+import provider
+
+class IMailer(provider.Interface):
+  def send(self, account, subject, body): pass
 
 
-class TestingModeMailer(AbstractMailer):
+class TestingModeMailer:
+  provider.implements(IMailer)
+
+  def __init__(self):
+    self.last_email = None
+
   def send(self, account, subject, body):
-    self.account = account
-    self.subject = subject
-    self.body = body
+    if hasattr(account, 'email'):
+      account = account.email
+    self.last_email = 'To: %s\nSubject: %s\n\n%s' % (account, subject, body)
 
   def getLastSentEmail(self):
-    return 'To: %s\nSubject: %s\n\n%s' % (
-        self.account, self.subject, self.body)
+    return self.last_email
 
 
-class ProductionModeMailer(AbstractMailer):
+@provider.adapter(type(None), IMailer)
+def test_mailer(_):
+  return TestingModeMailer()
+
+
+class ProductionModeMailer:
+  provider.implements(IMailer)
+
   def send(self, account, subject, body):
     mail.send_mail(sender='IrcQuotes Adminstration <logan@ircquotes.com>',
                    to=account.email,
