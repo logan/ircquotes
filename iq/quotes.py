@@ -9,6 +9,7 @@ from google.appengine.ext import db
 from google.appengine.ext import search
 
 import accounts
+import provider
 import system
 
 class QuoteException(Exception):
@@ -39,7 +40,7 @@ class Line:
     if preserve_formatting:
       self.formatting = []
     else:
-      self.formatting = list(LineFormatterRegistry.parse(line))
+      self.formatting = list(ILineParser(None).parse(line))
 
   def __repr__(self):
     if len(self.original) > 20:
@@ -47,6 +48,12 @@ class Line:
     else:
       line = self.original
     return '<Line: %r formatting=%s>' % (line, self.formatting)
+
+
+class ILineParser(provider.Interface):
+  def parseDialog(self, dialog, preserve_formatting): pass
+
+  def parse(self, line): pass
 
 
 class LineFormatterRegistry(type):
@@ -90,6 +97,11 @@ class LineFormatterRegistry(type):
             break
         else:
           break
+
+
+@provider.adapter(type(None), ILineParser)
+def line_parser(_):
+  return LineFormatterRegistry
 
 
 class LineFormatter(object):
