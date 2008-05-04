@@ -35,21 +35,3 @@ class TestLine:
     line = quotes.Line('a' * 21)
     assert repr(line) == '<Line: %r formatting=%s>' % (
         'a' * 17 + '...', ['a'] * 21)
-
-
-class TestLineFormatterRegistry:
-  def test_parseDialog(self):
-    dialog = '\n'.join([
-      '  first line',
-      '   continues here',
-      '    and here',
-      '   second line',
-      'third line',
-    ])
-    expected = [
-      quotes.Line('first line continues here and here', True),
-      quotes.Line('second line', True),
-      quotes.Line('third line', True),
-    ]
-    parsed = quotes.LineFormatterRegistry.parseDialog(dialog, True)
-    assert map(repr, parsed) == map(repr, expected)
