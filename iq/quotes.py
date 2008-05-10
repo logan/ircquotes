@@ -256,6 +256,7 @@ class Quote(search.SearchableModel):
       quote.note = note
       quote.submitted = submitted
       quote.modified = modified or submitted
+      quote.labels = loc_labels
     else:
       new = True
       quote = cls(parent=account,
@@ -266,6 +267,7 @@ class Quote(search.SearchableModel):
                   modified=modified or submitted,
                   draft=False,
                   state=cls.PUBLISHED,
+                  labels=loc_labels,
                  )
     quote.rebuild()
     if new:
@@ -275,8 +277,6 @@ class Quote(search.SearchableModel):
   @classmethod
   def getDraft(cls, account, key):
     draft = cls.getQuoteByKey(account, key)
-    if not draft:
-      raise InvalidKeyException
     if draft.state != cls.DRAFT:
       raise InvalidQuoteStateException
     return draft
@@ -292,9 +292,7 @@ class Quote(search.SearchableModel):
 
   @classmethod
   def getQuoteByShortId(cls, account, id, parent):
-    logging.info('getting by id: %r, %r', parent, id)
     quote = cls.get_by_id(id, parent)
-    logging.info('quote = %r', quote)
     if not quote:
       raise InvalidKeyException
     if quote.state < cls.PUBLISHED and account.key() != quote.parent_key():
