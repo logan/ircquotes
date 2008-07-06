@@ -149,6 +149,8 @@ INDEX_CONFIG = IndexSet(
                Property('-timestamp'),
               ),
         ),
+
+    Kind('Account', Index(Property('-active'))),
 )
 
 def saveYaml(data, path):
