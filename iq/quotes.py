@@ -375,10 +375,24 @@ class Quote(search.SearchableModel):
   @classmethod
   def search(cls, query, offset=0, limit=10):
     logging.info('quote search: query=%r, offset=%r, limit=%r', query, offset, limit)
+
+    # The search index only supports searching by one term. We'll filter any
+    # additional terms as we fetch from the index.
+    query_terms = query.lower().split()
     db_query = cls.all()
-    db_query.search(query)
+    db_query.search(query_terms[0])
     db_query.filter('state =', cls.PUBLISHED)
-    return list(db_query.fetch(offset=offset, limit=limit))
+
+    # TODO: Don't overfetch so much, and make more efficient.
+    def matchAll(quote):
+      index = quote.__dict__['_entity']['__searchable_text_index']
+      for term in query_terms[1:]:
+        if term not in index:
+          return False
+      return True
+    results = [quote for quote in db_query.fetch(offset=0, limit=1000)
+               if matchAll(quote)]
+    return results[offset:offset+limit]
 
   def put(self):
     if True or self.state is None:
