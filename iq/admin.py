@@ -69,10 +69,31 @@ class EnvironmentPage(service.Service):
     pass
 
 
+class AccountPage(service.Service):
+  @admin('accounts.html')
+  def get(self):
+    # TODO: Support >1000 accounts
+    order = self.request.get('order', '-active')
+    query = accounts.Account.all()
+    query.order(order)
+    self.template.accounts = query.fetch(offset=0, limit=1000)
+
+
+class EditAccountPage(service.Service):
+  @admin('edit-account.html')
+  def get(self):
+    account = accounts.Account.getById(self.request.get('id'))
+    if not account:
+      self.template.error = 'Invalid ID'
+    self.template.account = account
+
+
 def main():
   pages = [
     ('/admin', AdminPage),
+    ('/admin/accounts', AccountPage),
     ('/admin/api', ApiPage),
+    ('/admin/edit-account', EditAccountPage),
     ('/admin/env', EnvironmentPage),
     ('/admin/rebuild', RebuildPage),
     ('/admin/wipe', WipePage),

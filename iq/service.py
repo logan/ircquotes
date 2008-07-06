@@ -263,6 +263,30 @@ class CreateAccountService(Service):
         return account
 
 
+class EditAccountService(Service):
+  def editAccount(self):
+    account = accounts.Account.getById(self.request.get('id'))
+    if not account:
+      self.template.edited = False
+      return
+
+    def toggle(field):
+      value = self.request.get(field, '')
+      logging.info("field = %r, value = %r", field, value)
+      if value == 'true':
+        logging.info(' account.%s = True', field)
+        setattr(account, field, True)
+      elif value == 'false':
+        logging.info(' account.%s = False', field)
+        setattr(account, field, False)
+
+    toggle('trusted')
+    toggle('admin')
+
+    account.put()
+    self.template.edited = True
+
+
 class ActivationService(Service):
   def activate(self):
     self.template.activated = False

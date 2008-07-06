@@ -62,6 +62,12 @@ class CreateAccountPage(service.CreateAccountService):
     self.maybeCreateAccount()
 
 
+class EditAccountPage(service.EditAccountService):
+  @json(require_admin=True)
+  def get(self):
+    self.editAccount()
+
+
 class LoginPage(service.LoginService):
   @json()
   def get(self):
@@ -196,6 +202,7 @@ class MigrateRatingPage(service.Service):
 def main():
   pages = [
     ('/json/create-account', CreateAccountPage),
+    ('/json/edit-account', EditAccountPage),
     ('/json/login', LoginPage),
     ('/json/logout', LogoutPage),
     ('/json/migrate-account', MigrateAccountPage),
