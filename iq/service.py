@@ -126,7 +126,7 @@ class Service(webapp.RequestHandler):
     self.response.headers.add_header('Set-Cookie', cookie_str)
 
   def generateSessionId(self):
-    return 's%s' % hash.generate()
+    return 's%s' % hash.IHash(None)
 
   def setAccount(self, account):
     logging.info('Setting account for remainder of request to: %s', account.id)
