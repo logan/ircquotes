@@ -485,7 +485,8 @@ function Rating(node) {
   var input_row = TR(null, this.average,
                      map(function(i) { return TD(null, i); }, this.inputs));
 
-  this.chart_control = SPAN(null, "Rating Chart &#9662;");
+  this.chart_control = SPAN(null);
+  this.chart_control.innerHTML = "Rating Chart &#9662;";
   this.chart_control.onclick = bind(this.toggleChart, this);
   this.chart_img = IMG({"src": node.getAttribute("chart")});
   this.chart = DIV({"class": "menu", "style": "display: none"}, this.chart_img);
