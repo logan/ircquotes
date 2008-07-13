@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<script>
+function Editor(id, trusted, admin) {
+  this.id = id;
+  this.trusted = trusted;
+  this.admin = admin;
+}
+
+Editor.prototype.render = function() {
+  map(bind(this.renderToggler, this),
+      getElementsByTagAndClassName("td", "toggler"));
+}
+
+Editor.prototype.renderToggler = function(elem) {
+  var field = elem.getAttribute("field");
+  var span = SPAN(null);
+  var control = INPUT({"type": "button", "value": "toggle"});
+
+  this.updateToggleSpan(field, span);
+  control.onclick = bind(partial(this.toggleField, field, span, control), this);
+  elem.appendChild(span);
+  elem.appendChild(control);
+}
+
+Editor.prototype.updateToggleSpan = function(field, span, toggle) {
+  if (toggle) {
+    this[field] = !this[field];
+  }
+  span.innerHTML = this[field] ? "yes " : "no ";
+}
+
+Editor.prototype.toggleField = function(field, value, control) {
+  var status = new Status(control);
+  var deferred = this.setField(field, !this[field]);
+
+  deferred.addCallback(bind(partial(this.updateToggleSpan, field, value, true),
+                            this));
+  deferred.addCallback(bind(partial(status.finalize, "Ok!"), status));
+  deferred.addErrback(bind(status.finalize, status));
+  return deferred;
+}
+
+Editor.prototype.setField = function(field, value) {
+  var params = { "id": this.id }
+
+  params[field] = value;
+
+  log("Setting [" + this.id + "]." + field + " to " + value);
+  return iqCall("/json/edit-account", params);
+}
+
+function Status(control) {
+  this.control = control;
+  this.control.disabled = true;
+  this.elem = SPAN(null);
+  this.throbber = new Throbber(32);
+  this.throbber.start(this.elem);
+}
+
+Status.prototype.finalize = function(msg) {
+  log("finalize: " + msg);
+  this.throbber.stop();
+  this.elem.innerHTML = msg;
+  this.control.disabled = false;
+}
+
+</script>
+
+<table class="form">
+  <tr>
+    <td class="label">ID:</td>
+    <td>{{ account.id|escape }}</td>
+  </tr>
+  <tr>
+    <td class="label">Name:</td>
+    <td>{{ account.name|escape }}</td>
+  </tr>
+  <tr>
+    <td class="label">Email:</td>
+    <td>{{ account.email|escape }}</td>
+  </tr>
+  <tr>
+    <td class="label">Trusted:</td>
+    <td class="toggler" field="trusted"></td>
+  </tr>
+  <tr>
+    <td class="label">Admin:</td>
+    <td class="toggler" field="admin"></td>
+  </tr>
+</table>
+
+<script>
+var trusted = {% if account.trusted %}true{% else %}false{% endif %};
+var admin = {% if account.admin %}true{% else %}false{% endif %};
+var editor = new Editor("{{ account.id }}", trusted, admin);
+
+editor.render();
+</script>
+{% endblock %}

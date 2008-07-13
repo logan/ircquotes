@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<table>
+  <tr>
+    <th><a href="?order=id">ID</a></th>
+    <th><a href="?order=name">Name</a></th>
+    <th><a href="?order=-active">Last Active</a></th>
+  </tr>
+{% for account in accounts %}
+  <tr>
+    <td><a href="edit-account?id={{ account.id|urlencode }}">{{ account.id|escape }}</a></td>
+    <td>{{ account.name|escape }}</td>
+    <td>{{ account.active|escape }}</td>
+  </tr>
+{% endfor %}
+</table>
+{% endblock %}
