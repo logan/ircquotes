@@ -110,7 +110,6 @@ class Service(webapp.RequestHandler):
     if pre_hook:
       pre_hook()
     impl(self)
-    self.session.put()
 
   def inTestingMode(self):
     if self.request.environ['SERVER_SOFTWARE'].startswith('Dev'):
@@ -130,7 +129,10 @@ class Service(webapp.RequestHandler):
 
   def setAccount(self, account):
     logging.info('Setting account for remainder of request to: %s', account.id)
+    old_account = self.session.account
     self.session.account = account
+    if old_account != self.session.account:
+      self.session.put()
     self.account = account
     self.template.account = account
 

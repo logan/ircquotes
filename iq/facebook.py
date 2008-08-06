@@ -71,7 +71,7 @@ class FacebookSupport:
           account.facebook_id = session.facebook_user
     else:
       self.valid = False
-    session.put()
+    #session.put()
 
   def __call__(self, method, **kwargs):
     session = self.handler.session
