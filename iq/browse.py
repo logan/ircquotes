@@ -2,6 +2,8 @@ import datetime
 import logging
 import urllib
 
+from google.appengine.api import memcache
+
 import accounts
 import quotes
 import service
@@ -154,6 +156,14 @@ class BrowseService(service.Service):
     maybeExportPage('prev_page', prev_page_spec, page_spec.reversed)
 
   def fetch_recent(self, page):
+    cache = memcache.Client()
+    if not page.reversed:
+      # Forward results are cacheable
+      cached_result = cache.get(page.encode())
+      if cached_result is not None:
+        logging.info('cache hit on fetch_recent: %s', page.encode())
+        return cached_result
+
     result = quotes.Quote.getRecentQuotes(start=page.start_value,
                                           offset=page.offset,
                                           limit=page.size,
@@ -167,7 +177,19 @@ class BrowseService(service.Service):
       prev_offset = 0
     next = page.copy(start_value=start, offset=offset)
     prev = page.copy(reversed=not page.reversed, offset=prev_offset)
+
+    if not page.reversed:
+      # Forward results are cacheable
+      cache.set(page.encode(), (quote_list, next, prev))
+
     return quote_list, next, prev
+
+  @staticmethod
+  @system.capture(quotes.VERB_PUBLISHED)
+  def invalidate_fetch_recent_cache():
+    logging.info('invalidating fetch_recent cache')
+    cache = memcache.Client()
+    cache.delete(PageSpecifier(mode='recent').encode())
 
   def fetch_draft(self, page):
     quote_list = quotes.Quote.getDraftQuotes(account=self.account,

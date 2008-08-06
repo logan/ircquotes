@@ -4,6 +4,7 @@ import re
 import urllib
 import wsgiref.handlers
 
+from google.appengine.api import memcache
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 
@@ -24,6 +25,7 @@ def ui(path, **kwargs):
         self.facebook = facebook.FacebookSupport(self)
         self.template.stability_level = str(system.getSystem().stability_level)
         self.template.current_version_id = os.environ.get('CURRENT_VERSION_ID')
+        self.template.cache_stats = memcache.Client().get_stats()
         if self.account.trusted:
           self.template.delete_return_url = self.request.url
           self.template.draft_page = browse.PageSpecifier(mode='draft')

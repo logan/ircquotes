@@ -130,6 +130,14 @@
         <a href="mailto:help@ircquotes.com">help@ircquotes.com</a>.
         <br>
         Server software: {% include "RELEASE" %}
+{%   if account.isAdmin %}
+        <p align="left">
+          Cache hits: {{ cache_stats.hits }}<br>
+          Cache misses: {{ cache_stats.misses }}<br>
+          Cache size: {{ cache_stats.items }} items ({{ cache_stats.bytes }} bytes)<br>
+          Cache age: {{ cache_stats.oldest_item_age }}<br>
+        </p>
+{%   endif %}
 {% endblock %}
       </div>
     </div>
