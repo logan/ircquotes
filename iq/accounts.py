@@ -3,6 +3,7 @@ import logging
 import re
 
 from google.appengine.api import mail
+from google.appengine.api import memcache
 from google.appengine.ext import db
 
 import hash
@@ -118,6 +119,10 @@ class Account(db.Expando):
     self.id = self.id.lower()
     if self.email:
       self.email = self.email.lower()
+    cache = memcache.Client()
+    cache.set('account:id:%s' % self.id, self)
+    cache.set('account:short_id:%s' % self.key().id(), self)
+    cache.set('account:email:%s' % self.email, self)
     return db.Model.put(self)
 
   @classmethod
@@ -144,12 +149,23 @@ class Account(db.Expando):
 
   @classmethod
   def getById(cls, id):
-    query = cls.all().filter('id =', id.lower())
-    return query.get()
+    cache = memcache.Client()
+    account = cache.get('account:id:%s' % id.lower())
+    if not account:
+      account = cls.all().filter('id =', id.lower()).get()
+      if account:
+        cache.set('account:id:%s' % id.lower(), account)
+    return account
 
   @classmethod
   def getByShortId(cls, id):
-    return cls.get_by_id(id)
+    cache = memcache.Client()
+    account = cache.get('account:short_id:%s' % id)
+    if not account:
+      account = cls.get_by_id(id)
+      if account:
+        cache.set('account:short_id:%s' % id, account)
+    return account
 
   @classmethod
   def getByLegacyId(cls, legacy_id):
@@ -157,9 +173,15 @@ class Account(db.Expando):
 
   @classmethod
   def getByEmail(cls, email):
+    cache = memcache.Client()
     email = email.strip().lower()
     logging.info("Looking up account by email: %r", email)
-    return cls.all().filter('email =', email).get()
+    account = cache.get('account:email:%s' % email)
+    if not account:
+      account = cls.all().filter('email =', email).get()
+      if account:
+        cache.set('account:email:%s' % email, account)
+    return account
 
   @classmethod
   def getByGoogleAccount(cls, user):
