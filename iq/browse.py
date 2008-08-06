@@ -186,10 +186,13 @@ class BrowseService(service.Service):
 
   @staticmethod
   @system.capture(quotes.VERB_PUBLISHED)
-  def invalidate_fetch_recent_cache():
-    logging.info('invalidating fetch_recent cache')
+  @system.capture(quotes.VERB_DELETED)
+  def invalidate_fetch_recent_cache(targets):
+    logging.info('invalidating fetch_recent cache for: %r', targets)
     cache = memcache.Client()
     cache.delete(PageSpecifier(mode='recent').encode())
+    for quote in targets:
+      cache.delete(PageSpecifier(mode='recent', account=quote.parent()).encode())
 
   def fetch_draft(self, page):
     quote_list = quotes.Quote.getDraftQuotes(account=self.account,

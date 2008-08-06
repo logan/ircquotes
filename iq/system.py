@@ -40,7 +40,7 @@ def record(actor, verb, *targets, **kwargs):
                   verb=verb,
                   **kwargs)
   action.put()
-  dispatcher.send(signal=verb, sender=record, action=action)
+  dispatcher.send(signal=verb, sender=record, action=action, targets=targets)
   return action
 
 

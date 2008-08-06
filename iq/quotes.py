@@ -5,6 +5,7 @@ import re
 import time
 import urllib
 
+from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import search
 
@@ -275,6 +276,30 @@ class Quote(search.SearchableModel):
     return quote
 
   @classmethod
+  def getByKey(cls, key):
+    cache = memcache.Client()
+    logging.info('checking quote:key:%s', key)
+    quote = cache.get('quote:key:%s' % key)
+    if not quote:
+      logging.info('missed!')
+      quote = cls.get(key)
+      if quote:
+        quote.updateCache()
+    return quote
+
+  @classmethod
+  def getById(cls, id, parent):
+    cache = memcache.Client()
+    logging.info('checking quote:id:%s:%s', id, parent.key().id())
+    quote = cache.get('quote:id:%s:%s' % (id, parent.key().id()))
+    if not quote:
+      logging.info('missed!')
+      quote = cls.get_by_id(id, parent)
+      if quote:
+        quote.updateCache()
+    return quote
+
+  @classmethod
   def getDraft(cls, account, key):
     draft = cls.getQuoteByKey(account, key)
     if draft.state != cls.DRAFT:
@@ -283,7 +308,7 @@ class Quote(search.SearchableModel):
 
   @classmethod
   def getQuoteByKey(cls, account, key):
-    quote = cls.get(key)
+    quote = cls.getByKey(key)
     if not quote:
       raise InvalidKeyException
     if quote.state < cls.PUBLISHED and account.key() != quote.parent_key():
@@ -292,7 +317,7 @@ class Quote(search.SearchableModel):
 
   @classmethod
   def getQuoteByShortId(cls, account, id, parent):
-    quote = cls.get_by_id(id, parent)
+    quote = cls.getById(id, parent)
     if not quote:
       raise InvalidKeyException
     if quote.state < cls.PUBLISHED and account.key() != quote.parent_key():
@@ -402,6 +427,20 @@ class Quote(search.SearchableModel):
         self.state = self.PUBLISHED
     return db.Model.put(self)
 
+  def invalidateCache(self):
+    cache = memcache.Client()
+    logging.info('invalidating quote:key:%s', self.key())
+    logging.info('invalidating quote:id:%s:%s', self.key().id(), self.parent_key().id())
+    cache.delete('quote:key:%s' % self.key())
+    cache.delete('quote:id:%s:%s' % (self.key().id(), self.parent_key().id()))
+
+  def updateCache(self):
+    cache = memcache.Client()
+    logging.info('caching quote:key:%s', self.key())
+    logging.info('caching quote:id:%s:%s', self.key().id(), self.parent_key().id())
+    cache.set('quote:key:%s' % self.key(), self)
+    cache.set('quote:id:%s:%s' % (self.key().id(), self.parent_key().id()), self)
+
   def getProperties(self):
     return dict([(prop, getattr(self, prop, None))
                  for prop in self.properties() if prop != 'clone_of'])
@@ -436,6 +475,7 @@ class Quote(search.SearchableModel):
 
   def unpublish(self):
     system.record(self.parent(), VERB_DELETED, self)
+    self.invalidateCache()
     self.delete()
 
   def republish(self, modified=None):
@@ -455,6 +495,7 @@ class Quote(search.SearchableModel):
       self.draft = False
       self.state = self.PUBLISHED
       if self.clone_of:
+        self.clone_of.invalidateCache()
         self.clone_of.delete()
         self.clone_of = None
       if update:
@@ -468,6 +509,7 @@ class Quote(search.SearchableModel):
       account.put()
     db.run_in_transaction(transaction)
     system.record(self.parent(), VERB_PUBLISHED, self, timestamp=self.submitted)
+    self.updateCache()
     return self
 
   def update(self,
