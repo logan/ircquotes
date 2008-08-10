@@ -182,6 +182,9 @@ class Service(webapp.RequestHandler):
     self.template.system = system.getSystem()
     self.template.google_signin = users.create_login_url(self.request.path)
 
+  def head(self):
+    return self.get()
+
 provider.registry.register(Service, mailer.IMailer, Service.getMailer)
 
 
